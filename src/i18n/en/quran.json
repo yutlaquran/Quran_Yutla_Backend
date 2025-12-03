@@ -1,0 +1,15 @@
+{
+  "FETCH_SURAHS_SUCCESS": "Surahs fetched successfully",
+  "FETCH_JUZ_SUCCESS": "Juz fetched successfully",
+  "FETCH_AYAH_SUCCESS": "Ayah fetched successfully",
+  "FETCH_SURAH_SUCCESS": "Surah fetched successfully",
+  "FETCH_SEARCH_SUCCESS": "Search results fetched successfully",
+  "INVALID_JUZ_NUMBER": "Juz number must be between 1 and 30",
+  "JUZ_NOT_FOUND": "Juz {{juzNumber}} not found",
+  "INVALID_SURAH_NUMBER": "Surah number must be between 1 and 114",
+  "SURAH_NOT_FOUND": "Surah {{surahNumber}} not found",
+  "INVALID_AYAH_NUMBER": "Ayah number must be between 1 and 6236",
+  "AYAH_NOT_FOUND": "Ayah {{ayahNumber}} not found",
+  "SEARCH_KEYWORD_REQUIRED": "Search keyword is required",
+  "ERROR_SEARCHING_QURAN": "Error searching Quran"
+}

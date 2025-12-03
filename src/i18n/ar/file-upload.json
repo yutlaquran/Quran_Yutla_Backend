@@ -1,0 +1,17 @@
+{
+  "FILE_UPLOADED_SUCCESSFULLY": "تم رفع الملف بنجاح",
+  "FILE_DELETED_SUCCESSFULLY": "تم حذف الملف بنجاح",
+  "FILE_NOT_FOUND": "الملف غير موجود",
+  "FILE_REQUIRED": "الملف مطلوب",
+  "FILE_SIZE_EXCEEDED": "حجم الملف يتجاوز الحد المسموح (20 ميجابايت)",
+  "INVALID_FILE_TYPE": "نوع الملف غير مدعوم",
+  "UPLOAD_FAILED": "فشل في رفع الملف",
+  "DELETE_FAILED": "فشل في حذف الملف",
+  "STORAGE_ERROR": "خطأ في التخزين",
+  "INVALID_FILE_NAME": "اسم الملف غير صالح",
+  "FILE_ALREADY_EXISTS": "الملف موجود بالفعل",
+  "INSUFFICIENT_STORAGE": "مساحة التخزين غير كافية",
+  "MULTIPLE_FILES_UPLOADED": "تم رفع عدة ملفات بنجاح",
+  "SUPPORTED_FORMATS": "الصيغ المدعومة",
+  "MAX_FILE_SIZE": "الحد الأقصى لحجم الملف"
+}

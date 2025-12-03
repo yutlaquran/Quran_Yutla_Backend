@@ -1,0 +1,16 @@
+{
+  "USER_NOT_FOUND": "المستخدم غير موجود",
+  "USER_PROFILE_NOT_FOUND": "ملف المستخدم الشخصي غير موجود",
+  "NATIONAL_ID_EXISTS": "هذا الرقم القومي موجود بالفعل",
+  "CANNOT_ASSIGN_ROLES_YOURSELF": "لا يمكنك تعيين أدوار لنفسك",
+  "ROLE_NOT_FOUND": "دور واحد أو أكثر غير موجود",
+  "NO_PERMISSION_CRUD_FEEDBACK": "ليس لديك صلاحية للتعامل مع هذه الملاحظات",
+  "SECRETARIAT_GOVERNORATE_MISMATCH": "هذا الدور لا يمكن أن يحتوي على أمانات في محافظة مختلفة",
+  "SECRETARIAT_MAIN_BRANCH_ERROR": "هذا الدور لا يمكن أن يحتوي على أمانات في الفرع الرئيسي",
+  "SECRETARIAT_CENTRAL_LEADERS_ERROR": "هذا الدور لا يمكن أن يحتوي على أمانات في محافظة مختلفة عن الفرع الرئيسي",
+  "USER_CREATED_SUCCESSFULLY": "تم إنشاء المستخدم بنجاح",
+  "USER_UPDATED_SUCCESSFULLY": "تم تحديث المستخدم بنجاح",
+  "USER_DELETED_SUCCESSFULLY": "تم حذف المستخدم بنجاح",
+  "ROLE_ASSIGNED_SUCCESSFULLY": "تم تعيين الدور بنجاح",
+  "PASSWORD_UPDATED_SUCCESSFULLY": "تم تحديث كلمة المرور بنجاح"
+}

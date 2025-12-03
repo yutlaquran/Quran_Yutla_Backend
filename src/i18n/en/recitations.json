@@ -1,0 +1,12 @@
+{
+  "RECITATION_UPLOADED_SUCCESSFULLY": "Recitation uploaded successfully",
+  "RECITATION_RETRIEVED_SUCCESSFULLY": "Recitation retrieved successfully",
+  "RECITATIONS_RETRIEVED_SUCCESSFULLY": "Recitations retrieved successfully",
+  "RECITATION_DELETED_SUCCESSFULLY": "Recitation deleted successfully",
+  "STATISTICS_RETRIEVED_SUCCESSFULLY": "Statistics retrieved successfully",
+  "RECITATION_NOT_FOUND": "Recitation not found",
+  "AUDIO_FILE_REQUIRED": "Audio file is required",
+  "FILE_TOO_LARGE": "File size exceeds 100MB limit",
+  "INVALID_AUDIO_FORMAT": "Invalid audio format. Allowed: MP3, WAV, M4A",
+  "INVALID_AYAH_RANGE": "Invalid ayah range. 'From Ayah' must be less than or equal to 'To Ayah'"
+}

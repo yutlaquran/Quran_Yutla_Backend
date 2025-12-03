@@ -1,0 +1,18 @@
+{
+  "APP_VERSION_RETRIEVED_SUCCESSFULLY": "تم استرداد إصدار التطبيق بنجاح",
+  "APP_VERSION_UPDATED_SUCCESSFULLY": "تم تحديث إصدار التطبيق بنجاح",
+  "APP_VERSION_CREATED_SUCCESSFULLY": "تم إنشاء إصدار التطبيق بنجاح",
+  "APP_VERSION_NOT_FOUND": "إصدار التطبيق غير موجود",
+  "INVALID_VERSION_FORMAT": "تنسيق الإصدار غير صحيح",
+  "VERSION_ALREADY_EXISTS": "هذا الإصدار موجود بالفعل",
+  "UPDATE_REQUIRED": "يتطلب تحديث التطبيق",
+  "UPDATE_OPTIONAL": "تحديث التطبيق اختياري",
+  "LATEST_VERSION": "أنت تستخدم أحدث إصدار",
+  "VERSION_NUMBER_REQUIRED": "رقم الإصدار مطلوب",
+  "VERSION_NAME_REQUIRED": "اسم الإصدار مطلوب",
+  "RELEASE_NOTES_TOO_LONG": "ملاحظات الإصدار لا يمكن أن تتجاوز 2000 حرف",
+  "INVALID_PLATFORM": "منصة التطبيق غير صحيحة",
+  "PLATFORM_ANDROID": "أندرويد",
+  "PLATFORM_IOS": "آي أو إس",
+  "PLATFORM_WEB": "ويب"
+}

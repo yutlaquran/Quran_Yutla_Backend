@@ -1,0 +1,8 @@
+{
+  "CREATE_FAQ_SUCCESS": "تم إنشاء السؤال بنجاح.",
+  "FETCH_FAQS_SUCCESS": "تم جلب الأسئلة الشائعة بنجاح.",
+  "FETCH_FAQ_SUCCESS": "تم جلب السؤال الشائع بنجاح.",
+  "UPDATE_FAQ_SUCCESS": "تم تحديث السؤال بنجاح.",
+  "DELETE_FAQ_SUCCESS": "تم حذف السؤال بنجاح.",
+  "FAQ_NOT_FOUND": "السؤال الشائع غير موجود."
+}

@@ -1,0 +1,16 @@
+{
+  "ATTENDANCE_CREATED_SUCCESSFULLY": "Attendance created successfully",
+  "ATTENDANCE_UPDATED_SUCCESSFULLY": "Attendance updated successfully",
+  "ATTENDANCE_DELETED_SUCCESSFULLY": "Attendance deleted successfully",
+  "ATTENDANCE_RETRIEVED_SUCCESSFULLY": "Attendance retrieved successfully",
+  "ATTENDANCES_RETRIEVED_SUCCESSFULLY": "Attendances retrieved successfully",
+  "MY_ATTENDANCES_RETRIEVED_SUCCESSFULLY": "My attendances retrieved successfully",
+  "ATTENDANCE_ALREADY_EXISTS": "Attendance already exists for this user in this session",
+  "USER_NOT_FOUND_OR_INVALID_ROLE": "User not found or invalid role",
+  "USER_NOT_FOUND": "User not found",
+  "ATTENDANCE_NOT_FOUND": "Attendance not found",
+  "NOTIFICATION_TITLE_ATTENDANCE_UPDATED": "Attendance Updated",
+  "NOTIFICATION_MESSAGE_ATTENDANCE_UPDATED": "Your status or grade has been updated for the session",
+  "ATTENDANCE_RECORDED": "Attendance recorded successfully",
+  "ATTENDANCE_RECORDED_DETAILS": "Your attendance has been recorded successfully. You can follow up on your rating for this session."
+}

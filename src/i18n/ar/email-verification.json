@@ -1,0 +1,19 @@
+{
+  "EMAIL_SENT_SUCCESSFULLY": "تم إرسال البريد الإلكتروني بنجاح",
+  "EMAIL_VERIFIED_SUCCESSFULLY": "تم التحقق من البريد الإلكتروني بنجاح",
+  "VERIFICATION_CODE_SENT": "تم إرسال رمز التحقق بنجاح",
+  "VERIFICATION_CODE_RESENT": "تم إعادة إرسال رمز التحقق بنجاح",
+  "EMAIL_ALREADY_VERIFIED": "البريد الإلكتروني تم التحقق منه بالفعل",
+  "INVALID_VERIFICATION_CODE": "رمز التحقق غير صالح أو منتهي الصلاحية",
+  "VERIFICATION_CODE_EXPIRED": "رمز التحقق منتهي الصلاحية",
+  "EMAIL_NOT_FOUND": "البريد الإلكتروني غير موجود",
+  "VERIFICATION_FAILED": "فشل في التحقق من البريد الإلكتروني",
+  "RESEND_LIMIT_EXCEEDED": "تم تجاوز الحد الأقصى لإعادة الإرسال",
+  "WAIT_BEFORE_RESEND": "يرجى الانتظار قبل إعادة إرسال رمز التحقق",
+  "INVALID_EMAIL_FORMAT": "تنسيق البريد الإلكتروني غير صحيح",
+  "EMAIL_SERVICE_UNAVAILABLE": "خدمة البريد الإلكتروني غير متوفرة حالياً",
+  "VERIFICATION_LIMIT": "تم تجاوز الحد الأقصى لعدد محاولات التحقق، يرجى المحاولة مرة أخرى لاحقاً",
+  "RECENT_REQUESTS": "يرجى الانتظار دقيقة واحدة قبل طلب واحدة جديدة.",
+  "USER_NOT_FOUND": "المستخدم غير موجود",
+  "ATTEMPTS_LIMIT_EXCEEDED": "تم تجاوز الحد الأقصى لعدد المحاولات. يرجى طلب رمز تحقق جديد."
+}

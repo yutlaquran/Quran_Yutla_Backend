@@ -1,0 +1,20 @@
+{
+  "NOTIFICATION_CREATED_SUCCESSFULLY": "تم إنشاء الإشعار بنجاح",
+  "NOTIFICATION_UPDATED_SUCCESSFULLY": "تم تحديث الإشعار بنجاح",
+  "NOTIFICATION_DELETED_SUCCESSFULLY": "تم حذف الإشعار بنجاح",
+  "NOTIFICATION_RETRIEVED_SUCCESSFULLY": "تم استرداد الإشعار بنجاح",
+  "NOTIFICATIONS_RETRIEVED_SUCCESSFULLY": "تم استرداد الإشعارات بنجاح",
+  "NOTIFICATION_NOT_FOUND": "الإشعار غير موجود",
+  "NOTIFICATION_MARKED_READ": "تم تحديد الإشعار كمقروء",
+  "NOTIFICATION_MARKED_UNREAD": "تم تحديد الإشعار كغير مقروء",
+  "ALL_NOTIFICATIONS_MARKED_READ": "تم تحديد جميع الإشعارات كمقروءة",
+  "NOTIFICATION_SENT_SUCCESSFULLY": "تم إرسال الإشعار بنجاح",
+  "BULK_NOTIFICATIONS_SENT": "تم إرسال الإشعارات المجمعة بنجاح",
+  "NOTIFICATION_TITLE_REQUIRED": "عنوان الإشعار مطلوب",
+  "NOTIFICATION_MESSAGE_REQUIRED": "رسالة الإشعار مطلوبة",
+  "NOTIFICATION_TITLE_TOO_LONG": "عنوان الإشعار لا يمكن أن يتجاوز 200 حرف",
+  "NOTIFICATION_MESSAGE_TOO_LONG": "رسالة الإشعار لا يمكن أن تتجاوز 1000 حرف",
+  "INVALID_NOTIFICATION_TYPE": "نوع الإشعار غير صحيح",
+  "INVALID_NOTIFICATION_PRIORITY": "أولوية الإشعار غير صحيحة",
+  "RECIPIENT_NOT_FOUND": "المستلم غير موجود"
+}

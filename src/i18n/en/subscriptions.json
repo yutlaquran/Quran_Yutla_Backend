@@ -1,0 +1,13 @@
+{
+  "SUBSCRIPTION_CREATED_SUCCESSFULLY": "Subscription created successfully",
+  "SUBSCRIPTION_ACTIVATED_SUCCESSFULLY": "Subscription activated successfully",
+  "SUBSCRIPTION_CANCELLED_SUCCESSFULLY": "Subscription cancelled successfully",
+  "SUBSCRIPTION_RETRIEVED_SUCCESSFULLY": "Subscription retrieved successfully",
+  "SUBSCRIPTIONS_RETRIEVED_SUCCESSFULLY": "Subscriptions retrieved successfully",
+  "RECORDING_PERMISSION_CHECKED": "Recording permission checked successfully",
+  "SUBSCRIPTION_NOT_FOUND": "Subscription not found",
+  "NO_ACTIVE_SUBSCRIPTION": "No active subscription found. Please subscribe to a plan first.",
+  "ACTIVE_SUBSCRIPTION_EXISTS": "You already have an active subscription",
+  "PLAN_NOT_AVAILABLE": "Selected plan is not available",
+  "NO_SESSIONS_REMAINING": "No sessions remaining. Your subscription has been used up for this month."
+}

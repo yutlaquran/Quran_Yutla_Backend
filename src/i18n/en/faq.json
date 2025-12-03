@@ -1,0 +1,8 @@
+{
+  "CREATE_FAQ_SUCCESS": "FAQ created successfully.",
+  "FETCH_FAQS_SUCCESS": "FAQs fetched successfully.",
+  "FETCH_FAQ_SUCCESS": "FAQ fetched successfully.",
+  "UPDATE_FAQ_SUCCESS": "FAQ updated successfully.",
+  "DELETE_FAQ_SUCCESS": "FAQ deleted successfully.",
+  "FAQ_NOT_FOUND": "FAQ not found."
+}

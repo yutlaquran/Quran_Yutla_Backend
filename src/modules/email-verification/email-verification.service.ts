@@ -1,0 +1,190 @@
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { EmailVerification } from './entities/email-verification.entity';
+import { MoreThan, Repository } from 'typeorm';
+import { User } from '../user/entities/user.entity';
+import { ServerEmailService } from 'src/common/email/email.service';
+import { CustomI18nService } from 'src/common/services/custom-i18n.service';
+import { SendVerificationDto } from './dto/send-verification.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import * as crypto from 'node:crypto';
+import { PasswordResetTokenService } from '../auth/password-reset-token.service';
+
+@Injectable()
+export class EmailVerificationService {
+  constructor(
+    @InjectRepository(EmailVerification)
+    private readonly emailVerificationRepository: Repository<EmailVerification>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly emailService: ServerEmailService,
+    private readonly i18n: CustomI18nService,
+    private passwordResetTokenService: PasswordResetTokenService,
+  ) {}
+
+  async sendVerificationCode(
+    sendVerificationDto: SendVerificationDto,
+    forgetPassword?: boolean,
+  ) {
+    const { email } = sendVerificationDto;
+
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with email ${email} not found.`);
+    }
+
+    if (user.isEmailVerified && !forgetPassword) {
+      throw new BadRequestException(
+        this.i18n.t('email-verification.EMAIL_ALREADY_VERIFIED'),
+      );
+    }
+
+    const oneHourAgo = new Date();
+    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+
+    const recentAttempts = await this.emailVerificationRepository.count({
+      where: {
+        userId: user.id,
+        createdAt: MoreThan(oneHourAgo),
+      },
+    });
+
+    if (recentAttempts >= 5) {
+      throw new BadRequestException(
+        this.i18n.t('email-verification.VERIFICATION_LIMIT'),
+      );
+    }
+
+    const oneMinuteAgo = new Date();
+    oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
+
+    const recentRequest = await this.emailVerificationRepository.findOne({
+      where: {
+        userId: user.id,
+        createdAt: MoreThan(oneMinuteAgo),
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (recentRequest) {
+      throw new BadRequestException(
+        this.i18n.t('email-verification.RECENT_REQUESTS'),
+      );
+    }
+
+    const otpCode = this.generateOTP();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+    const emailVerification = this.emailVerificationRepository.create({
+      userId: user.id,
+      email: user.email, // Add email field
+      otpCode,
+      expiresAt,
+      isForPasswordReset: forgetPassword || false, // Set the flag
+    });
+
+    await this.emailVerificationRepository.save(emailVerification);
+
+    this.emailService.sendVerificationEmail(user.fullName, user.email, otpCode);
+
+    return {
+      expiresIn: '15 minutes',
+    };
+  }
+
+  async verifyEmail(verifyEmailDto: VerifyEmailDto) {
+    const { email, otpCode } = verifyEmailDto;
+
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        this.i18n.t('email-verification.USER_NOT_FOUND'),
+      );
+    }
+
+    const verification = await this.emailVerificationRepository.findOne({
+      where: {
+        userId: user.id,
+        otpCode,
+        isUsed: false,
+        expiresAt: MoreThan(new Date()),
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!verification) {
+      const latestVerification = await this.emailVerificationRepository.findOne(
+        {
+          where: { userId: user.id, isUsed: false },
+          order: { createdAt: 'DESC' },
+        },
+      );
+
+      if (latestVerification) {
+        latestVerification.attempts += 1;
+        await this.emailVerificationRepository.save(latestVerification);
+
+        if (latestVerification.attempts >= 5) {
+          latestVerification.isUsed = true;
+          await this.emailVerificationRepository.save(latestVerification);
+          throw new BadRequestException(
+            this.i18n.t('email-verification.ATTEMPTS_LIMIT_EXCEEDED'),
+          );
+        }
+      }
+
+      throw new BadRequestException(
+        this.i18n.t('email-verification.INVALID_VERIFICATION_CODE'),
+      );
+    }
+
+    // Mark verification as used
+    verification.isUsed = true;
+    await this.emailVerificationRepository.save(verification);
+
+    // Check if this was for password reset BEFORE updating user
+    const isPasswordReset = verification.isForPasswordReset;
+
+    if (!isPasswordReset) {
+      // Only update email verification status for regular signup
+      user.isEmailVerified = true;
+      await this.userRepository.save(user);
+    }
+
+    if (isPasswordReset) {
+      // Generate password reset token
+      const passwordResetToken =
+        this.passwordResetTokenService.generatePasswordResetToken(email);
+
+      return {
+        passwordResetToken, // Return the token
+      };
+    }
+
+    return {
+      passwordResetToken: null,
+    };
+  }
+
+  private generateOTP(): string {
+    return crypto.randomInt(100000, 999999).toString();
+  }
+
+  async cleanupExpiredCodes() {
+    const result = await this.emailVerificationRepository.delete({
+      expiresAt: MoreThan(new Date()),
+    });
+    return result.affected;
+  }
+}

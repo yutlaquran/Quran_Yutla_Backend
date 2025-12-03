@@ -1,0 +1,19 @@
+{
+  "EMAIL_SENT_SUCCESSFULLY": "Email sent successfully",
+  "EMAIL_VERIFIED_SUCCESSFULLY": "Email verified successfully",
+  "VERIFICATION_CODE_SENT": "Verification code sent successfully",
+  "VERIFICATION_CODE_RESENT": "Verification code resent successfully",
+  "EMAIL_ALREADY_VERIFIED": "Email is already verified",
+  "INVALID_VERIFICATION_CODE": "Invalid or expired verification code",
+  "VERIFICATION_CODE_EXPIRED": "Verification code has expired",
+  "EMAIL_NOT_FOUND": "Email not found",
+  "VERIFICATION_FAILED": "Email verification failed",
+  "RESEND_LIMIT_EXCEEDED": "Resend limit exceeded",
+  "WAIT_BEFORE_RESEND": "Please wait before resending verification code",
+  "INVALID_EMAIL_FORMAT": "Invalid email format",
+  "EMAIL_SERVICE_UNAVAILABLE": "Email service is currently unavailable",
+  "VERIFICATION_LIMIT": "Too many verification attempts, please try again later",
+  "RECENT_REQUESTS": "Please wait 1 min before requesting a new one.",
+  "USER_NOT_FOUND": "User not found",
+  "ATTEMPTS_LIMIT_EXCEEDED": "Too many attempts. Please request a new verification code."
+}

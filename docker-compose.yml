@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    networks:
+      - ${NETWORK_NAME}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - '${POSTGRES_PORT}:5432'
+
+  app:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: ${BUILD_TARGET:-production}
+    environment:
+      APP_ENV: ${APP_ENV}
+    env_file:
+      - ${ENV_FILE}
+    depends_on:
+      - postgres
+    networks:
+      - ${NETWORK_NAME}
+    ports:
+      - '${APP_PORT}:3000'
+      - '${DEBUG_PORT}:4800'
+
+  network-setup:
+    image: alpine:latest
+    command: echo "Network setup complete"
+    networks:
+      - ${NETWORK_NAME}
+
+networks:
+  quran_yutla:
+    name: quran_yutla
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local

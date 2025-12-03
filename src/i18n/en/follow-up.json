@@ -1,0 +1,7 @@
+{
+  "FOLLOW_UP_EXISTS": "Follow-up already exists for this period",
+  "MANAGER_NOT_FOUND": "Manager not found",
+  "BRANCH_NOT_FOUND": "Branch not found",
+  "USER_NOT_FOUND": "User not found",
+  "FOLLOW_UP_NOT_FOUND": "Follow-up not found"
+}

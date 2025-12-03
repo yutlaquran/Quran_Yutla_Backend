@@ -1,0 +1,13 @@
+{
+  "SUBSCRIPTION_CREATED_SUCCESSFULLY": "تم إنشاء الاشتراك بنجاح",
+  "SUBSCRIPTION_ACTIVATED_SUCCESSFULLY": "تم تفعيل الاشتراك بنجاح",
+  "SUBSCRIPTION_CANCELLED_SUCCESSFULLY": "تم إلغاء الاشتراك بنجاح",
+  "SUBSCRIPTION_RETRIEVED_SUCCESSFULLY": "تم جلب الاشتراك بنجاح",
+  "SUBSCRIPTIONS_RETRIEVED_SUCCESSFULLY": "تم جلب الاشتراكات بنجاح",
+  "RECORDING_PERMISSION_CHECKED": "تم التحقق من صلاحية التسجيل بنجاح",
+  "SUBSCRIPTION_NOT_FOUND": "الاشتراك غير موجود",
+  "NO_ACTIVE_SUBSCRIPTION": "لا يوجد اشتراك نشط. الرجاء الاشتراك في باقة أولاً.",
+  "ACTIVE_SUBSCRIPTION_EXISTS": "لديك بالفعل اشتراك نشط",
+  "PLAN_NOT_AVAILABLE": "الباقة المحددة غير متاحة",
+  "NO_SESSIONS_REMAINING": "لا توجد جلسات متبقية. تم استنفاد اشتراكك لهذا الشهر."
+}

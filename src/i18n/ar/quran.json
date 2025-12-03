@@ -1,0 +1,18 @@
+{
+  "FETCH_SURAHS_SUCCESS": "تم جلب السور بنجاح",
+  "FETCH_JUZ_SUCCESS": "تم جلب الجزء بنجاح",
+  "FETCH_PAGE_SUCCESS": "تم جلب الصفحة بنجاح",
+  "FETCH_AYAH_SUCCESS": "تم جلب الآية بنجاح",
+  "FETCH_SURAH_SUCCESS": "تم جلب السورة بنجاح",
+  "FETCH_SEARCH_SUCCESS": "تم جلب نتائج البحث بنجاح",
+  "INVALID_JUZ_NUMBER": "رقم الجزء يجب أن يكون بين 1 و 30",
+  "JUZ_NOT_FOUND": "الجزء {{juzNumber}} غير موجود",
+  "INVALID_SURAH_NUMBER": "رقم السورة يجب أن يكون بين 1 و 114",
+  "SURAH_NOT_FOUND": "السورة {{surahNumber}} غير موجودة",
+  "INVALID_PAGE_NUMBER": "رقم الصفحة يجب أن يكون بين 1 و 604",
+  "PAGE_NOT_FOUND": "الصفحة {{pageNumber}} غير موجودة",
+  "INVALID_AYAH_NUMBER": "رقم الآية يجب أن يكون بين 1 و 6236",
+  "AYAH_NOT_FOUND": "الآية {{ayahNumber}} غير موجودة",
+  "SEARCH_KEYWORD_REQUIRED": "يجب توفير كلمة بحث",
+  "ERROR_SEARCHING_QURAN": "خطأ في البحث في القرآن"
+}

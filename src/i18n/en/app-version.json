@@ -1,0 +1,18 @@
+{
+  "APP_VERSION_RETRIEVED_SUCCESSFULLY": "App version retrieved successfully",
+  "APP_VERSION_UPDATED_SUCCESSFULLY": "App version updated successfully",
+  "APP_VERSION_CREATED_SUCCESSFULLY": "App version created successfully",
+  "APP_VERSION_NOT_FOUND": "App version not found",
+  "INVALID_VERSION_FORMAT": "Invalid version format",
+  "VERSION_ALREADY_EXISTS": "This version already exists",
+  "UPDATE_REQUIRED": "App update is required",
+  "UPDATE_OPTIONAL": "App update is optional",
+  "LATEST_VERSION": "You are using the latest version",
+  "VERSION_NUMBER_REQUIRED": "Version number is required",
+  "VERSION_NAME_REQUIRED": "Version name is required",
+  "RELEASE_NOTES_TOO_LONG": "Release notes cannot exceed 2000 characters",
+  "INVALID_PLATFORM": "Invalid platform",
+  "PLATFORM_ANDROID": "Android",
+  "PLATFORM_IOS": "iOS",
+  "PLATFORM_WEB": "Web"
+}

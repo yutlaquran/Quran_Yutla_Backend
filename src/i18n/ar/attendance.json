@@ -1,0 +1,16 @@
+{
+  "ATTENDANCE_CREATED_SUCCESSFULLY": "تم إنشاء سجل الحضور بنجاح",
+  "ATTENDANCE_UPDATED_SUCCESSFULLY": "تم تحديث سجل الحضور بنجاح",
+  "ATTENDANCE_DELETED_SUCCESSFULLY": "تم حذف سجل الحضور بنجاح",
+  "ATTENDANCE_RETRIEVED_SUCCESSFULLY": "تم استرداد سجل الحضور بنجاح",
+  "ATTENDANCES_RETRIEVED_SUCCESSFULLY": "تم استرداد سجلات الحضور بنجاح",
+  "MY_ATTENDANCES_RETRIEVED_SUCCESSFULLY": "تم استرداد سجلات حضوري بنجاح",
+  "ATTENDANCE_ALREADY_EXISTS": "سجل الحضور موجود بالفعل لهذا المستخدم في هذه الجلسة",
+  "USER_NOT_FOUND_OR_INVALID_ROLE": "المستخدم غير موجود أو غير مصرح له",
+  "USER_NOT_FOUND": "المستخدم غير موجود",
+  "ATTENDANCE_NOT_FOUND": "سجل الحضور غير موجود",
+  "NOTIFICATION_TITLE_ATTENDANCE_UPDATED": "تم تحديث الحضور",
+  "NOTIFICATION_MESSAGE_ATTENDANCE_UPDATED": "تم تحديث درجتك أو حضورك في الجلسة",
+  "ATTENDANCE_RECORDED": "تم تسجيل حضورك بنجاح",
+  "ATTENDANCE_RECORDED_DETAILS": "تم تسجيل حضورك في الجلسة بنجاح. يمكنك متابعة تقييمك لهذه الجلسة"
+}
