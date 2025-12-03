@@ -1,4 +1,4 @@
-# 📋 دليل اختبار APIs - مشروع Al-Azhar Backend
+# 📋 دليل اختبار APIs - مشروع Quran Yutla Backend
 
 ## 🔗 Base URL
 ```

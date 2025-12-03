@@ -13,7 +13,7 @@ export class ServerEmailService {
   ) {
     this.fromEmail =
       this.configService.getOrThrow<string>('SMTP_FROM') ||
-      '"opream-support" <onway@opream.net>';
+      '"halim-support" <support@halim.net>';
   }
 
   async sendVerificationEmail(
@@ -49,7 +49,7 @@ export class ServerEmailService {
         to: trimmedEmail,
         from: this.fromEmail,
         subject: 'Reset Password',
-        text: 'Welcome to Opream',
+        text: 'Welcome to Quran Yutla',
         html: passwordResetEmail(verificationCode),
       });
       return {

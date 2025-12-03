@@ -5,9 +5,9 @@
 
 DB_HOST="57.128.59.32"
 DB_PORT="31499"
-DB_USER="alazhar_admin"
-DB_NAME="alazhar_db"
-DB_PASSWORD="alazhar@Opream1379"
+DB_USER="quran_yutla_admin"
+DB_NAME="quran_yutla_db"
+DB_PASSWORD="quran_yutla@Halim1379"
 
 echo "🚀 Starting direct Quran data import to production database..."
 echo "📊 Database: $DB_NAME @ $DB_HOST:$DB_PORT"

@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: "alazhar-backend-deploy"
+  group: "quran-yutla-backend-deploy"
   cancel-in-progress: false
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: docker.io/${{ secrets.DOCKER_USERNAME }}/alazhar-backend:${{ steps.vars.outputs.COMMIT_HASH }}
+          tags: docker.io/${{ secrets.DOCKER_USERNAME }}/quran-yutla-backend:${{ steps.vars.outputs.COMMIT_HASH }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -59,14 +59,14 @@ jobs:
 
       - name: Set Kubeconfig context
         run: |
-          kubectl config use-context kubernetes-admin@opream-stage
+          kubectl config use-context kubernetes-admin@halim-stage
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/alazhar-backend \
-            backend=docker.io/${{ secrets.DOCKER_USERNAME }}/alazhar-backend:${{ needs.build.outputs.COMMIT_HASH }} \
-            -n alazhar
+          kubectl set image deployment/quran-yutla-backend \
+            backend=docker.io/${{ secrets.DOCKER_USERNAME }}/quran-yutla-backend:${{ needs.build.outputs.COMMIT_HASH }} \
+            -n quran-yutla
 
       - name: Verify Deployment Rollout
         run: |
-          kubectl rollout status deployment/alazhar-backend -n alazhar
+          kubectl rollout status deployment/quran-yutla-backend -n quran-yutla

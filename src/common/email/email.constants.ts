@@ -117,7 +117,7 @@ export const passwordResetEmail = (verificationCode: string): string => {
     <p>If you did not request to reset your password, you should be able to ignore this email.</p>
   </div>
   <div>
-    <p>Thank you from the opream team</p>
+    <p>Thank you from the Quran Yutla team</p>
   </div>
 </body>
 </html>
