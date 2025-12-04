@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Token } from '../../common/entities/token.entity';
 import { AppEnv } from '../../common/enums/app-env.enum';
+import { RolesEnum } from '../../common/enums/roles.enum';
 import { PasswordService } from '../../common/helpers/encryption/password.service';
 import { CustomI18nService } from '../../common/services/custom-i18n.service';
 import { EmailVerificationService } from '../email-verification/email-verification.service';
@@ -18,6 +19,8 @@ import { UserService } from '../user/user.service';
 import { ChangePasswordDto } from './dto/requests/change-password.dto';
 import { LoginDto } from './dto/requests/login.dto';
 import { StudentSignUpDto } from './dto/requests/student-sign-up.dto';
+import { ParentSignUpDto } from './dto/requests/parent-sign-up.dto';
+import { TeacherSignUpDto } from './dto/requests/teacher-sign-up.dto';
 import { UpdatePasswordDto } from './dto/requests/update-password.dto';
 import { Tokens } from './interfaces/tokens.interface';
 
@@ -58,6 +61,9 @@ export class AuthService {
 
     const hashedPassword = await this.passwordService.hash(signUpDto.password);
 
+    // Generate unique student code
+    const studentCode = await this.generateUniqueStudentCode();
+
     const newUser: Partial<User> = {
       email: signUpDto.email,
       phoneNumber: signUpDto.phoneNumber,
@@ -66,7 +72,8 @@ export class AuthService {
       country: signUpDto.country,
       ageGroup: signUpDto.ageGroup,
       gender: signUpDto.gender,
-      nationalId: signUpDto.nationalId,
+      roles: [RolesEnum.STUDENT],
+      studentCode,
     };
 
     user = this.userRepository.create(newUser);
@@ -294,5 +301,111 @@ export class AuthService {
     currentUser.password = newPasswordHash;
 
     await this.userRepository.save(currentUser);
+  }
+
+  private async generateUniqueStudentCode(): Promise<string> {
+    let code = '';
+    let exists = true;
+
+    while (exists) {
+      // Generate 6-digit random code
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+      const user = await this.userRepository.findOne({
+        where: { studentCode: code },
+      });
+      exists = !!user;
+    }
+
+    return code;
+  }
+
+  async parentSignup(signUpDto: ParentSignUpDto) {
+    // Check if parent already exists
+    let user = await this.userRepository.findOne({
+      where: [
+        { email: signUpDto.email },
+        { phoneNumber: signUpDto.phoneNumber },
+      ],
+    });
+
+    if (user) {
+      throw new ConflictException(
+        this.i18n.t('auth.USER_ALREADY_EXISTS', {
+          email: signUpDto.email,
+          phoneNumber: signUpDto.phoneNumber,
+        }),
+      );
+    }
+
+    // Find student by code
+    const student = await this.userRepository.findOne({
+      where: { studentCode: signUpDto.studentCode },
+    });
+
+    if (!student) {
+      throw new NotFoundException(
+        this.i18n.t('auth.STUDENT_CODE_NOT_FOUND'),
+      );
+    }
+
+    if (student.parentId) {
+      throw new ConflictException(
+        this.i18n.t('auth.STUDENT_ALREADY_HAS_PARENT'),
+      );
+    }
+
+    const hashedPassword = await this.passwordService.hash(signUpDto.password);
+
+    const newParent: Partial<User> = {
+      email: signUpDto.email,
+      phoneNumber: signUpDto.phoneNumber,
+      password: hashedPassword,
+      fullName: signUpDto.fullName,
+      roles: [RolesEnum.PARENT],
+    };
+
+    const parent = this.userRepository.create(newParent);
+    const savedParent = await this.userRepository.save(parent);
+
+    // Link student to parent
+    student.parentId = savedParent.id;
+    await this.userRepository.save(student);
+
+    await this.setPlayerIdForUser(savedParent, signUpDto.playerId);
+    return savedParent;
+  }
+
+  async teacherSignup(signUpDto: TeacherSignUpDto) {
+    let user = await this.userRepository.findOne({
+      where: [
+        { email: signUpDto.email },
+        { phoneNumber: signUpDto.phoneNumber },
+      ],
+    });
+
+    if (user) {
+      throw new ConflictException(
+        this.i18n.t('auth.USER_ALREADY_EXISTS', {
+          email: signUpDto.email,
+          phoneNumber: signUpDto.phoneNumber,
+        }),
+      );
+    }
+
+    const hashedPassword = await this.passwordService.hash(signUpDto.password);
+
+    const newTeacher: Partial<User> = {
+      email: signUpDto.email,
+      phoneNumber: signUpDto.phoneNumber,
+      password: hashedPassword,
+      fullName: signUpDto.name,
+      roles: [RolesEnum.TEACHER],
+    };
+
+    user = this.userRepository.create(newTeacher);
+    const savedUser = await this.userRepository.save(user);
+
+    await this.setPlayerIdForUser(savedUser, signUpDto.playerId);
+    return savedUser;
   }
 }

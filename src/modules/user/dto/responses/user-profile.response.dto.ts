@@ -28,10 +28,6 @@ export class BaseUserProfileDto {
 
   preferredCommittees?: string;
 
-  nationalIdImageFront?: string;
-
-  nationalIdImageBack?: string;
-
   personalPhoto?: string;
 
   educationalCertificate?: string;

@@ -40,10 +40,6 @@ export class User extends BaseEntity {
   @MaxLength(100, { message: 'Full name cannot be longer than 100 characters' })
   fullName: string;
 
-  @Column({ name: 'national_id', unique: true, nullable: true })
-  @MaxLength(20, { message: 'National ID cannot be longer than 20 characters' })
-  nationalId: string;
-
   @Column({
     type: 'enum',
     enum: Gender,
@@ -85,27 +81,10 @@ export class User extends BaseEntity {
     type: 'enum',
     enum: RolesEnum,
     array: true,
-    default: [RolesEnum.GUEST],
+    default: [],
     nullable: false,
   })
   roles: RolesEnum[];
-
-  @Column({
-    name: 'national_image_url',
-    nullable: true,
-    transformer: {
-      to: (value: string) => value,
-      from: (value: string) => {
-        const baseUrl = process.env.OVH_BASE_URL || 'https://yourbaseurl.com';
-        if (!value) return value;
-        if (value.startsWith('http://') || value.startsWith('https://')) {
-          return value.replace(/^(http:\/\/|https:\/\/)[^\/]+/, baseUrl);
-        }
-        return `${baseUrl}${value}`;
-      },
-    },
-  })
-  nationalImageUrl: string;
 
   @Column({
     name: 'profile_image_url',

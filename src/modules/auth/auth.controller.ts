@@ -16,6 +16,8 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/requests/login.dto';
 import { RefreshTokenDto } from './dto/requests/refresh-token.dto';
 import { StudentSignUpDto } from './dto/requests/student-sign-up.dto';
+import { ParentSignUpDto } from './dto/requests/parent-sign-up.dto';
+import { TeacherSignUpDto } from './dto/requests/teacher-sign-up.dto';
 import { Tokens } from './interfaces/tokens.interface';
 import { EmailVerificationService } from '../email-verification/email-verification.service';
 import { VerifyEmailDto } from '../email-verification/dto/verify-email.dto';
@@ -46,11 +48,52 @@ export class AuthController {
 
   @Post('sign-up')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Register new user' })
+  @ApiOperation({ summary: 'Register new student' })
   @ApiResponse({ status: 200, description: 'Registration successful' })
   @SuccessResponse('auth.SIGNUP_SUCCESSFUL')
   async signup(@Body() signDto: StudentSignUpDto) {
     const user = await this.authService.signup(signDto);
+
+    await this.emailVerificationService.sendVerificationCode({
+      email: user.email,
+    });
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        studentCode: user.studentCode,
+      },
+    };
+  }
+
+  @Post('sign-up/parent')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Register new parent with student code' })
+  @ApiResponse({ status: 200, description: 'Parent registration successful' })
+  @SuccessResponse('auth.PARENT_SIGNUP_SUCCESSFUL')
+  async parentSignup(@Body() signDto: ParentSignUpDto) {
+    const user = await this.authService.parentSignup(signDto);
+
+    await this.emailVerificationService.sendVerificationCode({
+      email: user.email,
+    });
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+      },
+    };
+  }
+
+  @Post('sign-up/teacher')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Register new teacher' })
+  @ApiResponse({ status: 200, description: 'Teacher registration successful' })
+  @SuccessResponse('auth.TEACHER_SIGNUP_SUCCESSFUL')
+  async teacherSignup(@Body() signDto: TeacherSignUpDto) {
+    const user = await this.authService.teacherSignup(signDto);
 
     await this.emailVerificationService.sendVerificationCode({
       email: user.email,

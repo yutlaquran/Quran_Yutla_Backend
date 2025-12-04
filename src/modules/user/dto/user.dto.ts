@@ -31,13 +31,6 @@ export class UserDto {
 
   @ApiProperty()
   @IsString()
-  @MaxLength(20, {
-    message: 'validation.MAX_LENGTH',
-  })
-  nationalId: string;
-
-  @ApiProperty()
-  @IsString()
   @MaxLength(50, {
     message: 'validation.MAX_LENGTH',
   })

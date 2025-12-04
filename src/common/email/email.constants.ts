@@ -97,7 +97,7 @@ export const verificationEmail = (username = 'User', otp: string): string => {
         <p>Please ignore this message.</p>
       </div>
       <div class="email-footer">
-        <p>Need assistance? <a href="mailto:support@ejar.com">Contact Support</a></p>
+        <p>Need assistance? <a href="mailto:support@quranyutla.com">Contact Support</a></p>
       </div>
     </div>
   </body>

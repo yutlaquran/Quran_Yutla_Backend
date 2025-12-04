@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
-  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -9,12 +8,11 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { TeacherType } from 'src/modules/user/enums/teacher-type.enum';
 
-export class TeacherSignUpDto {
+export class ParentSignUpDto {
   @ApiProperty({
-    description: 'Teacher email address',
-    example: 'teacher@example.com',
+    description: 'Parent email address',
+    example: 'parent@example.com',
     maxLength: 255,
   })
   @IsNotEmpty({ message: 'Email is required' })
@@ -24,14 +22,14 @@ export class TeacherSignUpDto {
   email: string;
 
   @ApiProperty({
-    description: 'Teacher full name',
-    example: 'Sheikh Ahmed Mohamed',
+    description: 'Parent full name',
+    example: 'Mohamed Ahmed Ali',
     maxLength: 100,
   })
   @IsNotEmpty({ message: 'Full name is required' })
   @IsString()
   @MaxLength(100, { message: 'Full name cannot be longer than 100 characters' })
-  name: string;
+  fullName: string;
 
   @ApiProperty({
     description: 'Phone number (10-15 digits)',
@@ -46,13 +44,14 @@ export class TeacherSignUpDto {
   phoneNumber: string;
 
   @ApiProperty({
-    description: 'Teacher type',
-    enum: TeacherType,
-    example: TeacherType.QURAN_TEACHER,
+    description: 'Student code to link with child',
+    example: 'STD123456',
+    maxLength: 20,
   })
-  @IsNotEmpty({ message: 'Teacher type is required' })
-  @IsEnum(TeacherType, { message: 'Please select a valid teacher type' })
-  type: TeacherType;
+  @IsNotEmpty({ message: 'Student code is required' })
+  @IsString()
+  @MaxLength(20, { message: 'Student code cannot exceed 20 characters' })
+  studentCode: string;
 
   @ApiProperty({
     description:
