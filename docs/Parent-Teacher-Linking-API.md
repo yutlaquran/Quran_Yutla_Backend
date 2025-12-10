@@ -10,7 +10,7 @@ This documentation covers the new APIs for linking students with parents and tea
 ### 1. Register Parent with Number of Children
 **Endpoint:** `POST /api/v1/auth/sign-up/parent`
 
-**Description:** Parent registers and specifies the number of children they have.
+**Description:** Parent registers and specifies the number of children along with their student codes.
 
 **Body:**
 ```json
@@ -19,10 +19,16 @@ This documentation covers the new APIs for linking students with parents and tea
   "fullName": "Ahmed Mohamed",
   "phoneNumber": "+201234567890",
   "numberOfChildren": 2,
+  "studentCodes": ["ABC123", "DEF456"],
   "password": "Password@123",
   "playerId": "optional-onesignal-id"
 }
 ```
+
+**Notes:**
+- The number of elements in `studentCodes` must match `numberOfChildren`
+- All student codes must be valid and exist in the system
+- All users associated with the codes must be of type STUDENT
 
 **Response:**
 ```json
@@ -39,6 +45,10 @@ This documentation covers the new APIs for linking students with parents and tea
   }
 }
 ```
+
+**Possible Errors:**
+- `400 Bad Request`: Number of student codes does not match number of children
+- `404 Not Found`: One or more student codes are invalid or not found
 
 ---
 
