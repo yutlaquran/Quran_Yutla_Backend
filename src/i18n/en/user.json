@@ -12,5 +12,12 @@
   "USER_UPDATED_SUCCESSFULLY": "User updated successfully",
   "USER_DELETED_SUCCESSFULLY": "User deleted successfully",
   "ROLE_ASSIGNED_SUCCESSFULLY": "Role assigned successfully",
-  "PASSWORD_UPDATED_SUCCESSFULLY": "Password updated successfully"
+  "PASSWORD_UPDATED_SUCCESSFULLY": "Password updated successfully",
+  "STUDENT_CODE_NOT_FOUND": "Student code not found",
+  "STUDENT_ALREADY_HAS_PARENT": "Student already has a parent",
+  "USER_IS_NOT_STUDENT": "User is not a student",
+  "TEACHER_NOT_FOUND": "Teacher not found",
+  "USER_IS_NOT_TEACHER": "User is not a teacher",
+  "STUDENT_NOT_FOUND": "Student not found",
+  "STUDENT_ALREADY_LINKED_TO_TEACHER": "Student is already linked to this teacher"
 }

@@ -12,5 +12,12 @@
   "USER_UPDATED_SUCCESSFULLY": "تم تحديث المستخدم بنجاح",
   "USER_DELETED_SUCCESSFULLY": "تم حذف المستخدم بنجاح",
   "ROLE_ASSIGNED_SUCCESSFULLY": "تم تعيين الدور بنجاح",
-  "PASSWORD_UPDATED_SUCCESSFULLY": "تم تحديث كلمة المرور بنجاح"
+  "PASSWORD_UPDATED_SUCCESSFULLY": "تم تحديث كلمة المرور بنجاح",
+  "STUDENT_CODE_NOT_FOUND": "كود الطالب غير موجود",
+  "STUDENT_ALREADY_HAS_PARENT": "الطالب مرتبط بولي أمر بالفعل",
+  "USER_IS_NOT_STUDENT": "المستخدم ليس طالباً",
+  "TEACHER_NOT_FOUND": "المعلم غير موجود",
+  "USER_IS_NOT_TEACHER": "المستخدم ليس معلماً",
+  "STUDENT_NOT_FOUND": "الطالب غير موجود",
+  "STUDENT_ALREADY_LINKED_TO_TEACHER": "الطالب مرتبط بهذا المعلم بالفعل"
 }

@@ -158,6 +158,18 @@ export class Plan {
   displayOrder: number;
 
   @ApiProperty({
+    description: 'Plan duration in days',
+    example: 30,
+  })
+  @Column({
+    name: 'duration_days',
+    type: 'int',
+    default: 30,
+    comment: 'Plan duration in days (default: 30 for monthly)',
+  })
+  durationDays: number;
+
+  @ApiProperty({
     description: 'Creation timestamp',
     example: '2024-01-01T00:00:00.000Z',
   })

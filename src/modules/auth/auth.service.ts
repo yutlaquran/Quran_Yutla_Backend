@@ -337,23 +337,6 @@ export class AuthService {
       );
     }
 
-    // Find student by code
-    const student = await this.userRepository.findOne({
-      where: { studentCode: signUpDto.studentCode },
-    });
-
-    if (!student) {
-      throw new NotFoundException(
-        this.i18n.t('auth.STUDENT_CODE_NOT_FOUND'),
-      );
-    }
-
-    if (student.parentId) {
-      throw new ConflictException(
-        this.i18n.t('auth.STUDENT_ALREADY_HAS_PARENT'),
-      );
-    }
-
     const hashedPassword = await this.passwordService.hash(signUpDto.password);
 
     const newParent: Partial<User> = {
@@ -362,14 +345,11 @@ export class AuthService {
       password: hashedPassword,
       fullName: signUpDto.fullName,
       roles: [RolesEnum.PARENT],
+      numberOfChildren: signUpDto.numberOfChildren,
     };
 
     const parent = this.userRepository.create(newParent);
     const savedParent = await this.userRepository.save(parent);
-
-    // Link student to parent
-    student.parentId = savedParent.id;
-    await this.userRepository.save(student);
 
     await this.setPlayerIdForUser(savedParent, signUpDto.playerId);
     return savedParent;

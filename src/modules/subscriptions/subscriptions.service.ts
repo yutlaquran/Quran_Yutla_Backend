@@ -3,24 +3,222 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { Subscription, SubscriptionStatus } from './entities/subscription.entity';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
+import { InitiatePaymentDto } from './dto/initiate-payment.dto';
+import { VerifyPaymentDto, PaymentStatus } from './dto/verify-payment.dto';
 import { CustomI18nService } from '../../common/services/custom-i18n.service';
 import { PlansService } from '../plans/plans.service';
 import { User } from '../user/entities/user.entity';
+import { PaymobService } from '../../common/services/paymob.service';
 
 @Injectable()
 export class SubscriptionsService {
+  private readonly logger = new Logger(SubscriptionsService.name);
   constructor(
     @InjectRepository(Subscription)
     private readonly subscriptionRepository: Repository<Subscription>,
     private readonly plansService: PlansService,
+    private readonly paymobService: PaymobService,
     private readonly i18n: CustomI18nService,
   ) {}
+
+  /**
+   * Initiate payment for a new subscription
+   * Returns payment URL for card payment using Paymob
+   */
+  async initiatePayment(
+    userId: number,
+    initiatePaymentDto: InitiatePaymentDto,
+  ): Promise<{
+    subscriptionId: number;
+    paymentUrl: string;
+    sessionId: string;
+    amount: number;
+  }> {
+    // Check if user already has an active subscription
+    const existingSubscription = await this.subscriptionRepository.findOne({
+      where: {
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+      },
+    });
+
+    if (existingSubscription) {
+      throw new ConflictException(
+        this.i18n.t('subscriptions.ACTIVE_SUBSCRIPTION_EXISTS'),
+      );
+    }
+
+    // Get plan details
+    const plan = await this.plansService.findOne(initiatePaymentDto.planId);
+
+    if (!plan.isActive) {
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.PLAN_NOT_AVAILABLE'),
+      );
+    }
+
+    // Create subscription (pending payment)
+    const subscription = this.subscriptionRepository.create({
+      userId,
+      planId: initiatePaymentDto.planId,
+      totalSessions: plan.sessionCount,
+      remainingSessions: 0, // Will be set after payment
+      sessionDuration: plan.sessionDuration,
+      autoRenew: initiatePaymentDto.autoRenew ?? false,
+      paymentMethod: 'card',
+      status: SubscriptionStatus.PENDING_PAYMENT,
+    });
+
+    const savedSubscription = await this.subscriptionRepository.save(subscription);
+
+    // Get user details for Paymob
+    const user = await this.subscriptionRepository.manager.findOne(User, {
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(this.i18n.t('user.USER_NOT_FOUND'));
+    }
+
+    // Create Paymob payment
+    try {
+      const paymobResponse = await this.paymobService.createPayment(
+        {
+          orderId: `SUB-${savedSubscription.id}`,
+          amount: plan.basePrice,
+          currency: 'EGP',
+          firstName: user.fullName?.split(' ')[0] || 'Student',
+          lastName: user.fullName?.split(' ').slice(1).join(' ') || 'User',
+          email: user.email,
+          phone: user.phoneNumber || '+20100000000',
+        },
+        'card',
+      );
+
+      return {
+        subscriptionId: savedSubscription.id,
+        paymentUrl: paymobResponse.paymentUrl,
+        sessionId: paymobResponse.paymentToken,
+        amount: plan.basePrice,
+      };
+    } catch (error) {
+      // Delete subscription if payment initiation fails
+      await this.subscriptionRepository.remove(savedSubscription);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify payment and activate subscription
+   */
+  async verifyPayment(
+    verifyPaymentDto: VerifyPaymentDto,
+  ): Promise<Subscription> {
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { id: verifyPaymentDto.subscriptionId },
+      relations: ['plan'],
+    });
+
+    if (!subscription) {
+      throw new NotFoundException(
+        this.i18n.t('subscriptions.SUBSCRIPTION_NOT_FOUND'),
+      );
+    }
+
+    if (subscription.status !== SubscriptionStatus.PENDING_PAYMENT) {
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.INVALID_SUBSCRIPTION_STATUS'),
+      );
+    }
+
+    // TODO: Verify transaction with payment gateway
+    // const isValid = await this.verifyTransactionWithGateway(verifyPaymentDto.transactionId);
+    
+    if (verifyPaymentDto.status === PaymentStatus.SUCCESS) {
+      // Activate subscription
+      const now = new Date();
+      const endDate = new Date(now);
+      endDate.setDate(endDate.getDate() + subscription.plan.durationDays);
+
+      subscription.status = SubscriptionStatus.ACTIVE;
+      subscription.startDate = now;
+      subscription.endDate = endDate;
+      subscription.lastPaymentDate = now;
+      subscription.nextBillingDate = endDate;
+      subscription.remainingSessions = subscription.totalSessions;
+      subscription.transactionId = verifyPaymentDto.transactionId;
+
+      return await this.subscriptionRepository.save(subscription);
+    } else {
+      // Payment failed
+      subscription.status = SubscriptionStatus.CANCELLED;
+      await this.subscriptionRepository.save(subscription);
+      
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.PAYMENT_FAILED'),
+      );
+    }
+  }
+
+  /**
+   * Handle Paymob webhook callback
+   */
+  async handlePaymobWebhook(webhookData: any): Promise<{ success: boolean }> {
+    try {
+      // Verify HMAC signature
+      const isValid = this.paymobService.verifyWebhookSignature(
+        webhookData.obj,
+        webhookData.hmac,
+      );
+
+      if (!isValid) {
+        this.logger.warn('Invalid webhook signature');
+        throw new BadRequestException('Invalid webhook signature');
+      }
+
+      // Process webhook
+      const result = await this.paymobService.processWebhook(webhookData.obj);
+
+      if (result.success) {
+        // Extract subscription ID from order ID (SUB-123 format)
+        const subscriptionId = parseInt(result.orderId.replace('SUB-', ''));
+
+        // Verify and activate subscription
+        await this.verifyPayment({
+          transactionId: result.transactionId,
+          subscriptionId,
+          status: PaymentStatus.SUCCESS,
+        });
+
+        this.logger.log(`Subscription ${subscriptionId} activated via webhook`);
+      } else {
+        // Payment failed, update subscription status
+        const subscriptionId = parseInt(result.orderId.replace('SUB-', ''));
+        const subscription = await this.subscriptionRepository.findOne({
+          where: { id: subscriptionId },
+        });
+
+        if (subscription) {
+          subscription.status = SubscriptionStatus.CANCELLED;
+          await this.subscriptionRepository.save(subscription);
+        }
+
+        this.logger.log(`Payment failed for subscription ${subscriptionId}`);
+      }
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Webhook processing failed', error);
+      throw error;
+    }
+  }
 
   async create(
     userId: number,

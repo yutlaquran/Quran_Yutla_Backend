@@ -18,7 +18,7 @@ config({
 
 export const dataSourceOptions:DataSourceOptions = {
   type: 'postgres',
-  synchronize: false, // Changed back to false after initial database setup
+  synchronize: true, // Temporarily set to true to create tables
   logging: false,
   migrations: ['dist/migrations/*{.ts,.js}'],
 };

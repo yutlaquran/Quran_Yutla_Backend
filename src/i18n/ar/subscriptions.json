@@ -4,10 +4,13 @@
   "SUBSCRIPTION_CANCELLED_SUCCESSFULLY": "تم إلغاء الاشتراك بنجاح",
   "SUBSCRIPTION_RETRIEVED_SUCCESSFULLY": "تم جلب الاشتراك بنجاح",
   "SUBSCRIPTIONS_RETRIEVED_SUCCESSFULLY": "تم جلب الاشتراكات بنجاح",
-  "RECORDING_PERMISSION_CHECKED": "تم التحقق من صلاحية التسجيل بنجاح",
+  "PAYMENT_INITIATED_SUCCESSFULLY": "تم بدء عملية الدفع بنجاح. يرجى إتمام الدفع.",
+  "RECORDING_PERMISSION_CHECKED": "تم التحقق من أذونات التسجيل بنجاح",
   "SUBSCRIPTION_NOT_FOUND": "الاشتراك غير موجود",
-  "NO_ACTIVE_SUBSCRIPTION": "لا يوجد اشتراك نشط. الرجاء الاشتراك في باقة أولاً.",
+  "NO_ACTIVE_SUBSCRIPTION": "لا يوجد اشتراك نشط. يرجى الاشتراك في باقة أولاً.",
   "ACTIVE_SUBSCRIPTION_EXISTS": "لديك بالفعل اشتراك نشط",
-  "PLAN_NOT_AVAILABLE": "الباقة المحددة غير متاحة",
-  "NO_SESSIONS_REMAINING": "لا توجد جلسات متبقية. تم استنفاد اشتراكك لهذا الشهر."
+  "PLAN_NOT_AVAILABLE": "الباقة المختارة غير متاحة",
+  "NO_SESSIONS_REMAINING": "لم يتبقَ جلسات. تم استخدام اشتراكك بالكامل لهذا الشهر.",
+  "PAYMENT_FAILED": "فشلت عملية الدفع. يرجى المحاولة مرة أخرى.",
+  "INVALID_SUBSCRIPTION_STATUS": "حالة الاشتراك غير صحيحة. قد يكون الدفع تم معالجته بالفعل."
 }

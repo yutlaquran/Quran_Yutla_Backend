@@ -7,6 +7,10 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  IsNumber,
+  IsPositive,
+  Min,
+  Max,
 } from 'class-validator';
 
 export class ParentSignUpDto {
@@ -44,14 +48,17 @@ export class ParentSignUpDto {
   phoneNumber: string;
 
   @ApiProperty({
-    description: 'Student code to link with child',
-    example: 'STD123456',
-    maxLength: 20,
+    description: 'Number of children',
+    example: 2,
+    minimum: 1,
+    maximum: 10,
   })
-  @IsNotEmpty({ message: 'Student code is required' })
-  @IsString()
-  @MaxLength(20, { message: 'Student code cannot exceed 20 characters' })
-  studentCode: string;
+  @IsNotEmpty({ message: 'Number of children is required' })
+  @IsNumber({}, { message: 'Number of children must be a number' })
+  @IsPositive({ message: 'Number of children must be positive' })
+  @Min(1, { message: 'Number of children must be at least 1' })
+  @Max(10, { message: 'Number of children cannot exceed 10' })
+  numberOfChildren: number;
 
   @ApiProperty({
     description:

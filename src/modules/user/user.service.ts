@@ -146,4 +146,140 @@ export class UserService {
   async count(): Promise<number> {
     return this.userRepository.count();
   }
+
+  // ==================== Parent-Child Linking ====================
+
+  async linkParent(parentId: number, studentCode: string): Promise<User> {
+    // Find student by code
+    const student = await this.userRepository.findOne({
+      where: { studentCode },
+    });
+
+    if (!student) {
+      throw new NotFoundException(
+        this.i18n.t('user.STUDENT_CODE_NOT_FOUND'),
+      );
+    }
+
+    // Check if student is already linked to a parent
+    if (student.parentId) {
+      throw new NotFoundException(
+        this.i18n.t('user.STUDENT_ALREADY_HAS_PARENT'),
+      );
+    }
+
+    // Check if student has STUDENT role
+    if (!student.roles.includes('STUDENT' as any)) {
+      throw new NotFoundException(
+        this.i18n.t('user.USER_IS_NOT_STUDENT'),
+      );
+    }
+
+    // Link student to parent
+    student.parentId = parentId;
+    return await this.userRepository.save(student);
+  }
+
+  async linkMultipleChildren(
+    parentId: number,
+    studentCodes: string[],
+  ): Promise<{ linked: User[]; failed: { code: string; reason: string }[] }> {
+    const linked: User[] = [];
+    const failed: { code: string; reason: string }[] = [];
+
+    for (const code of studentCodes) {
+      try {
+        const student = await this.linkParent(parentId, code);
+        linked.push(student);
+      } catch (error) {
+        failed.push({
+          code,
+          reason: error.message,
+        });
+      }
+    }
+
+    return { linked, failed };
+  }
+
+  async getChildren(parentId: number): Promise<User[]> {
+    return await this.userRepository.find({
+      where: { parentId },
+      select: [
+        'id',
+        'email',
+        'fullName',
+        'phoneNumber',
+        'gender',
+        'country',
+        'ageGroup',
+        'profileImageUrl',
+        'studentCode',
+        'registrationDate',
+      ],
+    });
+  }
+
+  // ==================== Teacher-Student Linking ====================
+
+  async linkTeacher(teacherId: number, studentId: number): Promise<User> {
+    // Find teacher
+    const teacher = await this.userRepository.findOne({
+      where: { id: teacherId },
+      relations: ['students'],
+    });
+
+    if (!teacher) {
+      throw new NotFoundException(this.i18n.t('user.TEACHER_NOT_FOUND'));
+    }
+
+    // Check if user is a teacher
+    if (!teacher.roles.includes('TEACHER' as any)) {
+      throw new NotFoundException(this.i18n.t('user.USER_IS_NOT_TEACHER'));
+    }
+
+    // Find student
+    const student = await this.userRepository.findOne({
+      where: { id: studentId },
+    });
+
+    if (!student) {
+      throw new NotFoundException(this.i18n.t('user.STUDENT_NOT_FOUND'));
+    }
+
+    // Check if student has STUDENT role
+    if (!student.roles.includes('STUDENT' as any)) {
+      throw new NotFoundException(this.i18n.t('user.USER_IS_NOT_STUDENT'));
+    }
+
+    // Check if already linked
+    const isAlreadyLinked = teacher.students?.some((s) => s.id === studentId);
+    if (isAlreadyLinked) {
+      throw new NotFoundException(
+        this.i18n.t('user.STUDENT_ALREADY_LINKED_TO_TEACHER'),
+      );
+    }
+
+    // Link student to teacher
+    if (!teacher.students) {
+      teacher.students = [];
+    }
+    teacher.students.push(student);
+    await this.userRepository.save(teacher);
+
+    return student;
+  }
+
+  async getStudents(teacherId: number): Promise<User[]> {
+    const teacher = await this.userRepository.findOne({
+      where: { id: teacherId },
+      relations: ['students'],
+    });
+
+    if (!teacher) {
+      throw new NotFoundException(this.i18n.t('user.TEACHER_NOT_FOUND'));
+    }
+
+    return teacher.students || [];
+  }
 }
