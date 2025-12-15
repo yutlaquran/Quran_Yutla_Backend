@@ -6,7 +6,6 @@ import {
   JuzQueryDto,
   SearchQueryDto,
   SurahQueryDto,
-  SurahsListQueryDto,
 } from './dto/query.dto';
 import {
   AyahResponseDto,
@@ -27,19 +26,27 @@ export class QuranController {
 
   /**
    * GET /quran/surahs
-   * Get all Surahs with pagination
+   * Get all Surahs (114 surahs)
    */
   @Get('surahs')
   @ApiOperation({
     summary: 'Get all Surahs',
+    description: 'Returns all 114 Surahs of the Quran'
+  })
+  @ApiQuery({
+    name: 'language',
+    required: false,
+    description: 'Language code for Surah names',
+    example: 'ar',
+    schema: { default: 'ar' }
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Surahs retrieved successfully'
+    description: 'All Surahs retrieved successfully'
   })
   @SuccessResponse('quran.FETCH_SURAHS_SUCCESS')
-  async getAllSurahs(@Query() query: SurahsListQueryDto) {
-    return this.quranService.getAllSurahs();
+  async getAllSurahs(@Query('language') language?: string) {
+    return this.quranService.getAllSurahs(language);
   }
 
   /**

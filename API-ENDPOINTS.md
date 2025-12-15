@@ -69,7 +69,10 @@
 | GET | `/users` | الحصول على جميع المستخدمين (مع Pagination) | ✅ Yes | ADMIN | `{ message, data: users[], metadata }` |
 | GET | `/users/:id` | الحصول على مستخدم محدد | ✅ Yes | ADMIN | `{ message, data: user }` |
 | PATCH | `/users/:id/roles` | تحديث أدوار المستخدم | ✅ Yes | ADMIN | `{ message, data: user }` |
-| DELETE | `/users/:id` | حذف مستخدم نهائياً | ✅ Yes | ADMIN | `{ message }` |
+| GET | `/users/admin/statistics` | إحصائيات المستخدمين (نشط، موقوف، أدوار...) | ✅ Yes | ADMIN | `{ message, data: { totalUsers, roleBreakdown, statusBreakdown, newRegistrationsLast30Days } }` |
+| PATCH | `/users/:id/suspend` | إيقاف مستخدم مع حفظ سبب الإيقاف | ✅ Yes | ADMIN | `{ message, data: user }` |
+| PATCH | `/users/:id/activate` | إعادة تفعيل مستخدم موقوف | ✅ Yes | ADMIN | `{ message, data: user }` |
+| DELETE | `/users/:id/permanent` | حذف مستخدم بشكل نهائي (Admin) | ✅ Yes | ADMIN | `{ message, data: { deleted: true } }` |
 
 **Update Profile Request**:
 ```json
@@ -89,6 +92,13 @@
 {
   "oldPassword": "string",
   "newPassword": "string"
+}
+```
+
+**Suspend User Request**:
+```json
+{
+  "reason": "Repeated policy violations"
 }
 ```
 

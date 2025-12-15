@@ -19,5 +19,11 @@
   "TEACHER_NOT_FOUND": "المعلم غير موجود",
   "USER_IS_NOT_TEACHER": "المستخدم ليس معلماً",
   "STUDENT_NOT_FOUND": "الطالب غير موجود",
-  "STUDENT_ALREADY_LINKED_TO_TEACHER": "الطالب مرتبط بهذا المعلم بالفعل"
+  "STUDENT_ALREADY_LINKED_TO_TEACHER": "الطالب مرتبط بهذا المعلم بالفعل",
+  "CHILD_NOT_LINKED_TO_PARENT": "الطفل غير مرتبط بهذا ولي الأمر",
+  "STUDENT_NOT_LINKED_TO_TEACHER": "الطالب غير مرتبط بهذا المعلم",
+  "USER_ALREADY_SUSPENDED": "المستخدم موقوف بالفعل",
+  "USER_NOT_SUSPENDED": "المستخدم غير موقوف",
+  "CANNOT_SUSPEND_SELF": "لا يمكنك إيقاف حسابك بنفسك",
+  "CANNOT_DELETE_SELF": "لا يمكنك حذف حسابك بنفسك"
 }

@@ -263,6 +263,164 @@ export class RecitationsController {
     return await this.recitationsService.getStatistics(user.id);
   }
 
+  // ==================== Parent Reports ====================
+
+  @Get('parent/children')
+  @Auth(RolesEnum.PARENT)
+  @ApiOperation({
+    summary: 'Get overview of all children linked to the parent',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Children overview retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.RECITATIONS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getParentChildrenOverview(@CurrentUser() parent: User) {
+    return await this.recitationsService.getParentChildrenOverview(parent.id);
+  }
+
+  @Get('parent/children/:childId/recitations')
+  @Auth(RolesEnum.PARENT)
+  @ApiOperation({
+    summary: 'Get recitations for a specific child',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Child recitations retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.RECITATIONS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getParentChildRecitations(
+    @CurrentUser() parent: User,
+    @Param('childId', ParseIntPipe) childId: number,
+    @Query() query: RecitationQueryDto,
+  ) {
+    return await this.recitationsService.getParentChildRecitations(
+      parent.id,
+      childId,
+      query,
+    );
+  }
+
+  @Get('parent/children/:childId/statistics')
+  @Auth(RolesEnum.PARENT)
+  @ApiOperation({
+    summary: 'Get statistics for a specific child',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Child statistics retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.STATISTICS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getParentChildStatistics(
+    @CurrentUser() parent: User,
+    @Param('childId', ParseIntPipe) childId: number,
+  ) {
+    return await this.recitationsService.getParentChildStatistics(
+      parent.id,
+      childId,
+    );
+  }
+
+  // ==================== Teacher Reports ====================
+
+  @Get('teacher/students')
+  @Auth(RolesEnum.TEACHER)
+  @ApiOperation({
+    summary: 'Get overview of all students linked to the teacher',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Students overview retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.RECITATIONS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getTeacherStudentsOverview(@CurrentUser() teacher: User) {
+    return await this.recitationsService.getTeacherStudentsOverview(teacher.id);
+  }
+
+  @Get('teacher/students/:studentId/recitations')
+  @Auth(RolesEnum.TEACHER)
+  @ApiOperation({
+    summary: 'Get recitations for a specific student linked to the teacher',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Student recitations retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.RECITATIONS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getTeacherStudentRecitations(
+    @CurrentUser() teacher: User,
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @Query() query: RecitationQueryDto,
+  ) {
+    return await this.recitationsService.getTeacherStudentRecitations(
+      teacher.id,
+      studentId,
+      query,
+    );
+  }
+
+  @Get('teacher/students/:studentId/statistics')
+  @Auth(RolesEnum.TEACHER)
+  @ApiOperation({
+    summary: 'Get statistics for a specific student linked to the teacher',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Student statistics retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.STATISTICS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getTeacherStudentStatistics(
+    @CurrentUser() teacher: User,
+    @Param('studentId', ParseIntPipe) studentId: number,
+  ) {
+    return await this.recitationsService.getTeacherStudentStatistics(
+      teacher.id,
+      studentId,
+    );
+  }
+
   @Get(':id')
   @Auth(RolesEnum.STUDENT)
   @ApiOperation({

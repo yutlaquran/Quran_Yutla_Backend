@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { ArrayContains, In, Repository } from 'typeorm';
 import { Token } from '../../common/entities/token.entity';
 import { AppEnv } from '../../common/enums/app-env.enum';
 import { RolesEnum } from '../../common/enums/roles.enum';
@@ -334,7 +334,7 @@ export class AuthService {
     const students = await this.userRepository.find({
       where: {
         studentCode: In(signUpDto.studentCodes),
-        roles: RolesEnum.STUDENT,
+        roles: ArrayContains([RolesEnum.STUDENT]),
       },
     });
 
@@ -382,7 +382,17 @@ export class AuthService {
     const savedParent = await this.userRepository.save(parent);
 
     await this.setPlayerIdForUser(savedParent, signUpDto.playerId);
-    return savedParent;
+    
+    // Return parent data with children information
+    return {
+      ...savedParent,
+      children: students.map(student => ({
+        id: student.id,
+        fullName: student.fullName,
+        studentCode: student.studentCode,
+        email: student.email,
+      })),
+    };
   }
 
   async teacherSignup(signUpDto: TeacherSignUpDto) {

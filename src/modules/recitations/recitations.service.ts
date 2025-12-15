@@ -13,6 +13,7 @@ import { RecitationQueryDto } from './dto/recitation-query.dto';
 import { CustomI18nService } from '../../common/services/custom-i18n.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { FileUploadService } from '../../common/fileUpload/fileUpload.service';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class RecitationsService {
@@ -21,6 +22,8 @@ export class RecitationsService {
   constructor(
     @InjectRepository(Recitation)
     private readonly recitationRepository: Repository<Recitation>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly fileUploadService: FileUploadService,
     private readonly i18n: CustomI18nService,
@@ -369,6 +372,232 @@ export class RecitationsService {
       averageScore: avg ? parseFloat(avg) : 0,
       completedRecitations,
       pendingRecitations,
+    };
+  }
+
+  // ==================== Parent Reports ====================
+
+  async getParentChildrenOverview(parentId: number) {
+    const children = await this.userRepository.find({
+      where: { parentId },
+      select: [
+        'id',
+        'fullName',
+        'email',
+        'phoneNumber',
+        'country',
+        'ageGroup',
+        'profileImageUrl',
+        'studentCode',
+        'parentId',
+      ],
+      order: { fullName: 'ASC' },
+    });
+
+    const data = await Promise.all(
+      children.map(async (child) => {
+        const [statistics, latestRecitation] = await Promise.all([
+          this.getStatistics(child.id),
+          this.getLatestRecitation(child.id),
+        ]);
+
+        return {
+          child: this.mapUserSummary(child),
+          statistics,
+          latestRecitation,
+        };
+      }),
+    );
+
+    return {
+      total: data.length,
+      data,
+    };
+  }
+
+  async getParentChildRecitations(
+    parentId: number,
+    childId: number,
+    query: RecitationQueryDto,
+  ) {
+    const child = await this.findChildForParent(parentId, childId);
+    const recitations = await this.findAll(child.id, query);
+
+    return {
+      child: this.mapUserSummary(child),
+      ...recitations,
+    };
+  }
+
+  async getParentChildStatistics(parentId: number, childId: number) {
+    const child = await this.findChildForParent(parentId, childId);
+    const statistics = await this.getStatistics(child.id);
+
+    return {
+      child: this.mapUserSummary(child),
+      statistics,
+    };
+  }
+
+  // ==================== Teacher Reports ====================
+
+  async getTeacherStudentsOverview(teacherId: number) {
+    const teacher = await this.userRepository.findOne({
+      where: { id: teacherId },
+      relations: ['students'],
+    });
+
+    if (!teacher) {
+      throw new NotFoundException(this.i18n.t('user.TEACHER_NOT_FOUND'));
+    }
+
+    const students = teacher.students || [];
+
+    const data = await Promise.all(
+      students.map(async (student) => {
+        const [statistics, latestRecitation] = await Promise.all([
+          this.getStatistics(student.id),
+          this.getLatestRecitation(student.id),
+        ]);
+
+        return {
+          student: this.mapUserSummary(student),
+          statistics,
+          latestRecitation,
+        };
+      }),
+    );
+
+    return {
+      total: data.length,
+      data,
+    };
+  }
+
+  async getTeacherStudentRecitations(
+    teacherId: number,
+    studentId: number,
+    query: RecitationQueryDto,
+  ) {
+    const student = await this.findStudentForTeacher(teacherId, studentId);
+    const recitations = await this.findAll(student.id, query);
+
+    return {
+      student: this.mapUserSummary(student),
+      ...recitations,
+    };
+  }
+
+  async getTeacherStudentStatistics(teacherId: number, studentId: number) {
+    const student = await this.findStudentForTeacher(teacherId, studentId);
+    const statistics = await this.getStatistics(student.id);
+
+    return {
+      student: this.mapUserSummary(student),
+      statistics,
+    };
+  }
+
+  // ==================== Helpers ====================
+
+  private async findChildForParent(parentId: number, childId: number): Promise<User> {
+    const child = await this.userRepository.findOne({
+      where: { id: childId, parentId },
+      select: [
+        'id',
+        'fullName',
+        'email',
+        'phoneNumber',
+        'country',
+        'ageGroup',
+        'profileImageUrl',
+        'studentCode',
+        'parentId',
+      ],
+    });
+
+    if (child) {
+      return child;
+    }
+
+    const exists = await this.userRepository.findOne({
+      where: { id: childId },
+      select: ['id'],
+    });
+
+    if (!exists) {
+      throw new NotFoundException(this.i18n.t('user.STUDENT_NOT_FOUND'));
+    }
+
+    throw new ForbiddenException(
+      this.i18n.t('user.CHILD_NOT_LINKED_TO_PARENT'),
+    );
+  }
+
+  private async findStudentForTeacher(teacherId: number, studentId: number): Promise<User> {
+    const student = await this.userRepository
+      .createQueryBuilder('student')
+      .innerJoin('student.teachers', 'teacher', 'teacher.id = :teacherId', {
+        teacherId,
+      })
+      .where('student.id = :studentId', { studentId })
+      .select([
+        'student.id',
+        'student.fullName',
+        'student.email',
+        'student.phoneNumber',
+        'student.country',
+        'student.ageGroup',
+        'student.profileImageUrl',
+        'student.studentCode',
+      ])
+      .getOne();
+
+    if (student) {
+      return student;
+    }
+
+    const exists = await this.userRepository.findOne({
+      where: { id: studentId },
+      select: ['id'],
+    });
+
+    if (!exists) {
+      throw new NotFoundException(this.i18n.t('user.STUDENT_NOT_FOUND'));
+    }
+
+    throw new ForbiddenException(
+      this.i18n.t('user.STUDENT_NOT_LINKED_TO_TEACHER'),
+    );
+  }
+
+  private async getLatestRecitation(userId: number) {
+    return await this.recitationRepository
+      .createQueryBuilder('recitation')
+      .where('recitation.user_id = :userId', { userId })
+      .orderBy('recitation.created_at', 'DESC')
+      .select([
+        'recitation.id',
+        'recitation.surahId',
+        'recitation.fromAyah',
+        'recitation.toAyah',
+        'recitation.status',
+        'recitation.evaluationScore',
+        'recitation.createdAt',
+      ])
+      .getOne();
+  }
+
+  private mapUserSummary(user: User) {
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      country: user.country,
+      ageGroup: user.ageGroup,
+      profileImageUrl: user.profileImageUrl,
+      studentCode: user.studentCode,
     };
   }
 }

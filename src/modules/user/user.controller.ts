@@ -9,6 +9,7 @@ import {
   HttpStatus,
   Post,
   Body,
+  Patch,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/auth.guard';
@@ -19,12 +20,12 @@ import { UserQueryDto } from './dto/requests/find-user-query.dto';
 import { PaginatedUserResponseDto } from './dto/responses/paginated-users.response.dto';
 import { User } from './entities/user.entity';
 import { UserService } from './user.service';
-import { StudentsQueryDto } from './dto/requests/students-query.dto';
 import { Auth } from 'src/common/guards/auth.decorator';
 import { RolesEnum } from 'src/common/enums/roles.enum';
 import { LinkParentDto } from './dto/requests/link-parent.dto';
 import { LinkMultipleChildrenDto } from './dto/requests/link-multiple-children.dto';
 import { LinkTeacherDto } from './dto/requests/link-teacher.dto';
+import { SuspendUserDto } from './dto/requests/suspend-user.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -37,6 +38,53 @@ export class UserController {
   @Serialize(PaginatedUserResponseDto)
   findAll(@Query() query: UserQueryDto) {
     return this.userService.findAll(query);
+  }
+
+  @Get('admin/statistics')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get aggregated user statistics (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
+  @SuccessResponse('User statistics retrieved successfully', 200)
+  async getStatistics() {
+    return this.userService.getUserStatistics();
+  }
+
+  @Patch(':id/suspend')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Suspend a user account (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User suspended successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @SuccessResponse('User suspended successfully', 200)
+  async suspendUser(
+    @CurrentUser() admin: User,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() suspendUserDto: SuspendUserDto,
+  ) {
+    return this.userService.suspendUser(admin.id, id, suspendUserDto.reason);
+  }
+
+  @Patch(':id/activate')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Reactivate a suspended user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User activated successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @SuccessResponse('User activated successfully', 200)
+  async activateUser(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.activateUser(id);
+  }
+
+  @Delete(':id/permanent')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Permanently delete a user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User permanently deleted' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @SuccessResponse('User permanently deleted', 200)
+  async permanentlyDelete(
+    @CurrentUser() admin: User,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    await this.userService.permanentlyDeleteUser(admin.id, id);
+    return { deleted: true };
   }
 
   @Get(':id')

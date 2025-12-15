@@ -19,5 +19,11 @@
   "TEACHER_NOT_FOUND": "Teacher not found",
   "USER_IS_NOT_TEACHER": "User is not a teacher",
   "STUDENT_NOT_FOUND": "Student not found",
-  "STUDENT_ALREADY_LINKED_TO_TEACHER": "Student is already linked to this teacher"
+  "STUDENT_ALREADY_LINKED_TO_TEACHER": "Student is already linked to this teacher",
+  "CHILD_NOT_LINKED_TO_PARENT": "Child is not linked to this parent",
+  "STUDENT_NOT_LINKED_TO_TEACHER": "Student is not linked to this teacher",
+  "USER_ALREADY_SUSPENDED": "User is already suspended",
+  "USER_NOT_SUSPENDED": "User is not suspended",
+  "CANNOT_SUSPEND_SELF": "You cannot suspend your own account",
+  "CANNOT_DELETE_SELF": "You cannot delete your own account"
 }
