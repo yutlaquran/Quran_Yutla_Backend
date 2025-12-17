@@ -248,51 +248,97 @@
 | Method | Endpoint | Description | Auth Required | Role Required | Response |
 |--------|----------|-------------|---------------|---------------|----------|
 | POST | `/recitations/upload` | رفع تسجيل تلاوة | ✅ Yes | STUDENT | `{ message, data: recitation }` |
+| POST | `/recitations/direct` | تسجيل تلاوة مباشرة | ✅ Yes | STUDENT | `{ message, data: recitation }` |
 | GET | `/recitations/my-recitations` | الحصول على تسجيلات الطالب | ✅ Yes | STUDENT | `{ message, data: recitations[], metadata }` |
 | GET | `/recitations/:id` | الحصول على تسجيل محدد | ✅ Yes | Any | `{ message, data: recitation }` |
 | DELETE | `/recitations/:id` | حذف تسجيل | ✅ Yes | STUDENT | `{ message }` |
+| GET | `/recitations/statistics` | إحصائيات التسجيلات | ✅ Yes | STUDENT | `{ message, data: statistics }` |
 
-### Teacher Evaluation
+### Teacher Evaluation (Manual)
 
 | Method | Endpoint | Description | Auth Required | Role Required | Response |
 |--------|----------|-------------|---------------|---------------|----------|
-| GET | `/recitations/pending` | الحصول على التسجيلات قيد المراجعة | ✅ Yes | TEACHER | `{ message, data: recitations[], metadata }` |
-| POST | `/recitations/:id/evaluate` | تقييم تسجيل طالب | ✅ Yes | TEACHER | `{ message, data: recitation }` |
+| GET | `/recitations/teacher/:recitationId` | الحصول على تسجيل للتقييم | ✅ Yes | TEACHER | `{ message, data: recitation }` |
+| POST | `/recitations/teacher/:recitationId/evaluate` | إضافة تقييم يدوي | ✅ Yes | TEACHER | `{ message, data: recitation }` |
+| PATCH | `/recitations/teacher/:recitationId/evaluate` | تحديث التقييم اليدوي | ✅ Yes | TEACHER | `{ message, data: recitation }` |
+
+### Teacher & Parent Reports
+
+| Method | Endpoint | Description | Auth Required | Role Required | Response |
+|--------|----------|-------------|---------------|---------------|----------|
+| GET | `/recitations/teacher/students` | تسجيلات جميع الطلاب | ✅ Yes | TEACHER | `{ message, data: recitations[], metadata }` |
+| GET | `/recitations/teacher/student/:studentId` | تسجيلات طالب محدد | ✅ Yes | TEACHER | `{ message, data: recitations[], metadata }` |
+| GET | `/recitations/parent/children` | تسجيلات الأبناء | ✅ Yes | PARENT | `{ message, data: recitations[], metadata }` |
+| GET | `/recitations/parent/child/:childId` | تسجيلات ابن محدد | ✅ Yes | PARENT | `{ message, data: recitations[], metadata }` |
+
+### AI Webhook (Internal)
+
+| Method | Endpoint | Description | Auth Required | Response |
+|--------|----------|-------------|---------------|----------|
+| POST | `/recitations/ai-webhook` | استقبال نتائج التقييم من AI | ✅ Webhook Secret | `{ success: true, message }` |
 
 **Upload Recitation Request** (multipart/form-data):
 ```
-audioFile: File (required)
-surahId: number (required)
+audio: File (required, max 100MB)
+surahId: number (required, 1-114)
 fromAyah: number (required)
 toAyah: number (required)
 ```
 
-**Evaluate Recitation Request**:
+**Direct Recording Request** (multipart/form-data):
+```
+audioBlob: Blob (required, max 100MB)
+surahId: number (required, 1-114)
+fromAyah: number (required)
+toAyah: number (required)
+```
+
+**Teacher Evaluation Request**:
 ```json
 {
-  "score": "number (0-100)",
-  "teacherNotes": "string",
-  "tajweedErrors": ["string"],
-  "pronunciationErrors": ["string"]
+  "score": 85.5,
+  "notes": "أداء ممتاز مع بعض الأخطاء البسيطة في التجويد"
+}
+```
+
+**AI Webhook Request** (Authorization: Bearer {webhookSecret}):
+```json
+{
+  "jobId": "uuid",
+  "status": "completed | error",
+  "score": 85.5,
+  "message": "Evaluation completed successfully",
+  "evaluationData": {
+    "tajweedScore": 90,
+    "pronunciationScore": 80,
+    "errors": ["خطأ في المد", "خطأ في الغنة"]
+  }
 }
 ```
 
 **Recitation Object**:
 ```json
 {
-  "id": "uuid",
-  "studentId": "uuid",
-  "surahId": "number",
-  "fromAyah": "number",
-  "toAyah": "number",
-  "audioUrl": "string",
-  "status": "PENDING | EVALUATED | REJECTED",
-  "score": "number",
-  "teacherNotes": "string",
-  "tajweedErrors": ["string"],
-  "pronunciationErrors": ["string"],
-  "evaluatedAt": "date",
-  "evaluatedBy": "uuid"
+  "id": 1,
+  "userId": 5,
+  "surahId": 1,
+  "fromAyah": 1,
+  "toAyah": 7,
+  "audioUrl": "https://storage.example.com/recitations/user-5/recitation-1.mp3",
+  "audioKey": "recitations/user-5/recitation-1.mp3",
+  "duration": 180,
+  "status": "pending | processing | completed | failed",
+  "aiEvaluationScore": 85.5,
+  "evaluationData": {},
+  "aiJobId": "uuid",
+  "teacherEvaluationScore": 90.0,
+  "teacherNotes": "أداء ممتاز",
+  "evaluatedByTeacherId": 3,
+  "teacherEvaluatedAt": "2024-01-15T10:30:00Z",
+  "createdAt": "2024-01-15T10:00:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z",
+  "user": {},
+  "surah": {}
 }
 ```
 
