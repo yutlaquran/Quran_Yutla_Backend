@@ -19,6 +19,7 @@ import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
+import { AdminActionSubscriptionDto } from './dto/admin-action-subscription.dto';
 import { Subscription } from './entities/subscription.entity';
 import { Auth } from '../../common/guards/auth.decorator';
 import { RolesEnum } from '../../common/enums/roles.enum';
@@ -321,4 +322,159 @@ export class SubscriptionsController {
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return await this.subscriptionsService.findOne(id);
   }
-}
+
+  @Patch(':id/suspend')
+  @Auth(RolesEnum.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Suspend subscription (Admin only)',
+    description: 'Temporarily suspend an active subscription',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Subscription suspended successfully',
+    type: Subscription,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Subscription is not active',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Subscription not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin role required',
+  })
+  @SuccessResponse(
+    'subscriptions.SUBSCRIPTION_SUSPENDED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async suspend(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() adminActionDto: AdminActionSubscriptionDto,
+  ) {
+    return await this.subscriptionsService.suspendSubscription(
+      id,
+      adminActionDto.reason,
+    );
+  }
+
+  @Patch(':id/resume')
+  @Auth(RolesEnum.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Resume suspended subscription (Admin only)',
+    description: 'Reactivate a suspended subscription',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Subscription resumed successfully',
+    type: Subscription,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Subscription is not suspended or already expired',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Subscription not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin role required',
+  })
+  @SuccessResponse(
+    'subscriptions.SUBSCRIPTION_RESUMED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async resume(@Param('id', ParseIntPipe) id: number) {
+    return await this.subscriptionsService.resumeSubscription(id);
+  }
+
+  @Patch(':id/cancel-by-admin')
+  @Auth(RolesEnum.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Cancel subscription (Admin only)',
+    description: 'Cancel a subscription by admin',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Subscription cancelled successfully',
+    type: Subscription,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Subscription already cancelled',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Subscription not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin role required',
+  })
+  @SuccessResponse(
+    'subscriptions.SUBSCRIPTION_CANCELLED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async cancelByAdmin(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() adminActionDto: AdminActionSubscriptionDto,
+  ) {
+    return await this.subscriptionsService.cancelSubscriptionByAdmin(
+      id,
+      adminActionDto.reason,
+    );
+  }
+
+  @Patch(':id/renew')
+  @Auth(RolesEnum.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Manually renew subscription (Admin only)',
+    description: 'Manually renew a subscription for another month',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Subscription renewed successfully',
+    type: Subscription,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Cannot renew cancelled subscription',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Subscription not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin role required',
+  })
+  @SuccessResponse(
+    'subscriptions.SUBSCRIPTION_RENEWED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async renewManually(@Param('id', ParseIntPipe) id: number) {
+    return await this.subscriptionsService.renewSubscriptionManually(id);
+  }}

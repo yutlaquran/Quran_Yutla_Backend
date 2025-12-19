@@ -379,6 +379,8 @@ export class RecitationsService {
     averageScore: number;
     completedRecitations: number;
     pendingRecitations: number;
+    totalDuration: number;
+    recitationsBySurah: Record<string, number>;
   }> {
     const [totalRecitations, completedRecitations, pendingRecitations] =
       await Promise.all([
@@ -398,11 +400,39 @@ export class RecitationsService {
       .andWhere('recitation.evaluation_score IS NOT NULL')
       .getRawOne();
 
+    // Calculate total duration
+    const { sum } = await this.recitationRepository
+      .createQueryBuilder('recitation')
+      .select('SUM(recitation.duration)', 'sum')
+      .where('recitation.user_id = :userId', { userId })
+      .andWhere('recitation.duration IS NOT NULL')
+      .getRawOne();
+
+    // Get recitations grouped by surah
+    const recitationsBySurah = await this.recitationRepository
+      .createQueryBuilder('recitation')
+      .select('recitation.surah_id', 'surahId')
+      .addSelect('COUNT(*)', 'count')
+      .where('recitation.user_id = :userId', { userId })
+      .groupBy('recitation.surah_id')
+      .getRawMany();
+
+    // Convert to object format
+    const recitationsBySurahObject = recitationsBySurah.reduce(
+      (acc, item) => {
+        acc[item.surahId] = parseInt(item.count);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
     return {
       totalRecitations,
       averageScore: avg ? parseFloat(avg) : 0,
       completedRecitations,
       pendingRecitations,
+      totalDuration: sum ? parseInt(sum) : 0,
+      recitationsBySurah: recitationsBySurahObject,
     };
   }
 

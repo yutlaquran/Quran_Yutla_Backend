@@ -12,6 +12,7 @@ import {
   UploadedFile,
   Query,
   Headers,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -35,6 +36,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { RolesEnum } from '../../common/enums/roles.enum';
 import { CurrentUser } from '../../common/guards/user.decorator';
 import { User } from '../user/entities/user.entity';
+import { ActiveSubscriptionGuard } from '../../common/guards/active-subscription.guard';
 import { SuccessResponse } from '../../common/interceptors/success-response.interceptor';
 
 @ApiTags('Recitations')
@@ -45,6 +47,7 @@ export class RecitationsController {
 
   @Post('upload')
   @Auth(RolesEnum.STUDENT)
+  @UseGuards(ActiveSubscriptionGuard)
   @UseInterceptors(FileInterceptor('audio'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
@@ -118,6 +121,7 @@ export class RecitationsController {
 
   @Post('record-direct')
   @Auth(RolesEnum.STUDENT)
+  @UseGuards(ActiveSubscriptionGuard)
   @UseInterceptors(FileInterceptor('audioBlob'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({

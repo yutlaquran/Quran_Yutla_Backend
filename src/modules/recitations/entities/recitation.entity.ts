@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { User } from '../../user/entities/user.entity';
+import { Surah } from '../../quran/entities/surah.entity';
 
 export enum RecitationStatus {
   PENDING = 'pending',
@@ -49,6 +50,14 @@ export class Recitation {
   })
   @Column({ name: 'surah_id', type: 'int' })
   surahId: number;
+
+  @ApiPropertyOptional({
+    description: 'Surah details',
+    type: () => Surah,
+  })
+  @ManyToOne(() => Surah)
+  @JoinColumn({ name: 'surah_id' })
+  surah: Surah;
 
   @ApiProperty({
     description: 'From Ayah number',

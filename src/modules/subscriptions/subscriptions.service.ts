@@ -443,4 +443,110 @@ export class SubscriptionsService {
       remainingSessions: subscription.remainingSessions,
     };
   }
+
+  /**
+   * Suspend subscription (Admin only)
+   */
+  async suspendSubscription(subscriptionId: number, reason?: string): Promise<Subscription> {
+    const subscription = await this.findOne(subscriptionId);
+
+    if (subscription.status !== SubscriptionStatus.ACTIVE) {
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.SUBSCRIPTION_NOT_ACTIVE'),
+      );
+    }
+
+    subscription.status = SubscriptionStatus.SUSPENDED;
+    if (reason) {
+      subscription.cancellationReason = reason;
+    }
+
+    this.logger.log(`Subscription ${subscriptionId} suspended by admin`);
+    return await this.subscriptionRepository.save(subscription);
+  }
+
+  /**
+   * Resume suspended subscription (Admin only)
+   */
+  async resumeSubscription(subscriptionId: number): Promise<Subscription> {
+    const subscription = await this.findOne(subscriptionId);
+
+    if (subscription.status !== SubscriptionStatus.SUSPENDED) {
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.SUBSCRIPTION_NOT_SUSPENDED'),
+      );
+    }
+
+    // Check if subscription end date is still valid
+    const now = new Date();
+    if (subscription.endDate && subscription.endDate < now) {
+      subscription.status = SubscriptionStatus.EXPIRED;
+      this.logger.log(`Cannot resume subscription ${subscriptionId} - already expired`);
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.SUBSCRIPTION_EXPIRED'),
+      );
+    }
+
+    subscription.status = SubscriptionStatus.ACTIVE;
+    delete subscription.cancellationReason;
+
+    this.logger.log(`Subscription ${subscriptionId} resumed by admin`);
+    return await this.subscriptionRepository.save(subscription);
+  }
+
+  /**
+   * Cancel subscription by admin
+   */
+  async cancelSubscriptionByAdmin(
+    subscriptionId: number,
+    reason?: string,
+  ): Promise<Subscription> {
+    const subscription = await this.findOne(subscriptionId);
+
+    if (subscription.status === SubscriptionStatus.CANCELLED) {
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.SUBSCRIPTION_ALREADY_CANCELLED'),
+      );
+    }
+
+    subscription.status = SubscriptionStatus.CANCELLED;
+    subscription.cancelledAt = new Date();
+    subscription.autoRenew = false;
+    if (reason) {
+      subscription.cancellationReason = reason;
+    }
+
+    this.logger.log(`Subscription ${subscriptionId} cancelled by admin`);
+    return await this.subscriptionRepository.save(subscription);
+  }
+
+  /**
+   * Manually renew subscription (Admin only)
+   */
+  async renewSubscriptionManually(subscriptionId: number): Promise<Subscription> {
+    const subscription = await this.findOne(subscriptionId);
+
+    if (subscription.status === SubscriptionStatus.CANCELLED) {
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.CANNOT_RENEW_CANCELLED_SUBSCRIPTION'),
+      );
+    }
+
+    // Reset for new month
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    subscription.startDate = now;
+    subscription.endDate = endDate;
+    subscription.remainingSessions = subscription.totalSessions;
+    subscription.lastPaymentDate = now;
+    subscription.nextBillingDate = endDate;
+    subscription.status = SubscriptionStatus.ACTIVE;
+    delete subscription.cancellationReason;
+    delete subscription.cancelledAt;
+
+    this.logger.log(`Subscription ${subscriptionId} renewed manually by admin`);
+    return await this.subscriptionRepository.save(subscription);
+  }
 }
