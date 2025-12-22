@@ -17,6 +17,7 @@ import { CountryEnum } from '../../../common/enums/country.enum';
 import { Notification } from '../../notification/entities/notification.entity';
 import { Gender } from '../enums/gender.enum';
 import { AgeGroup } from '../enums/age-group.enum';
+import { UserStatus } from '../enums/user-status.enum';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -135,6 +136,22 @@ export class User extends BaseEntity {
   })
   numberOfChildren: number;
 
+  @Column({
+    type: 'enum',
+    enum: UserStatus,
+    default: UserStatus.ACTIVE,
+  })
+  status: UserStatus;
+
+  @Column({ name: 'suspended_at', type: 'timestamptz', nullable: true })
+  suspendedAt: Date | null;
+
+  @Column({ name: 'suspended_reason', type: 'text', nullable: true })
+  suspendedReason: string | null;
+
+  @Column({ name: 'suspended_by_admin_id', type: 'int', nullable: true })
+  suspendedByAdminId: number | null;
+
   // ==================== Relations ====================
 
   // Parent-Children relation (one parent can have many children)
@@ -143,7 +160,7 @@ export class User extends BaseEntity {
   parent: User;
 
   @Column({ name: 'parent_id', nullable: true })
-  parentId: number;
+  parentId: number | null;
 
   @OneToMany(() => User, (user) => user.parent)
   children: User[];

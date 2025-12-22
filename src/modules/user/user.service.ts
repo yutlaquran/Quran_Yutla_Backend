@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CustomI18nService } from 'src/common/services/custom-i18n.service';
 import { PaginationService } from 'src/common/utils/pagination.utils';
@@ -6,6 +10,8 @@ import { Repository } from 'typeorm';
 import { UserQueryDto } from './dto/requests/find-user-query.dto';
 import { UpdateUserServiceDto } from './dto/requests/update-user-service.dto';
 import { User } from './entities/user.entity';
+import { RolesEnum } from 'src/common/enums/roles.enum';
+import { UserStatus } from './enums/user-status.enum';
 
 @Injectable()
 export class UserService {
@@ -20,7 +26,7 @@ export class UserService {
   }
 
   async findAll(query: UserQueryDto) {
-    let { keyword, email, role, phoneNumber, fullName } = query;
+    let { keyword, email, role, phoneNumber, fullName, status } = query;
 
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
@@ -38,6 +44,9 @@ export class UserService {
         'user.ageGroup',
         'user.profileImageUrl',
         'user.studentCode',
+        'user.status',
+        'user.suspendedAt',
+        'user.suspendedReason',
       ])
       .where('user.isEmailVerified = :isEmailVerified', {
         isEmailVerified: true,
@@ -71,6 +80,10 @@ export class UserService {
       queryBuilder.andWhere('user.fullName ILIKE :fullName', {
         fullName: `%${fullName}%`,
       });
+    }
+
+    if (status) {
+      queryBuilder.andWhere('user.status = :status', { status });
     }
 
     const result = await PaginationService.paginateQueryBuilder<User>(
@@ -107,6 +120,9 @@ export class UserService {
         'playerIds',
         'studentCode',
         'parentId',
+        'status',
+        'suspendedAt',
+        'suspendedReason',
       ],
     });
 
@@ -169,7 +185,7 @@ export class UserService {
     }
 
     // Check if student has STUDENT role
-    if (!student.roles.includes('STUDENT' as any)) {
+    if (!student.roles.includes(RolesEnum.STUDENT)) {
       throw new NotFoundException(
         this.i18n.t('user.USER_IS_NOT_STUDENT'),
       );
@@ -234,7 +250,7 @@ export class UserService {
     }
 
     // Check if user is a teacher
-    if (!teacher.roles.includes('TEACHER' as any)) {
+    if (!teacher.roles.includes(RolesEnum.TEACHER)) {
       throw new NotFoundException(this.i18n.t('user.USER_IS_NOT_TEACHER'));
     }
 
@@ -248,7 +264,7 @@ export class UserService {
     }
 
     // Check if student has STUDENT role
-    if (!student.roles.includes('STUDENT' as any)) {
+    if (!student.roles.includes(RolesEnum.STUDENT)) {
       throw new NotFoundException(this.i18n.t('user.USER_IS_NOT_STUDENT'));
     }
 
@@ -281,5 +297,136 @@ export class UserService {
     }
 
     return teacher.students || [];
+  }
+
+  async suspendUser(
+    adminId: number,
+    userId: number,
+    reason?: string,
+  ): Promise<User> {
+    if (adminId === userId) {
+      throw new BadRequestException(
+        this.i18n.t('user.CANNOT_SUSPEND_SELF'),
+      );
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException(this.i18n.t('user.USER_NOT_FOUND'));
+    }
+
+    if (user.status === UserStatus.SUSPENDED) {
+      throw new BadRequestException(
+        this.i18n.t('user.USER_ALREADY_SUSPENDED'),
+      );
+    }
+
+    user.status = UserStatus.SUSPENDED;
+    user.suspendedAt = new Date();
+    user.suspendedReason = reason ?? null;
+    user.suspendedByAdminId = adminId;
+
+    return this.userRepository.save(user);
+  }
+
+  async activateUser(userId: number): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException(this.i18n.t('user.USER_NOT_FOUND'));
+    }
+
+    if (user.status !== UserStatus.SUSPENDED) {
+      throw new BadRequestException(
+        this.i18n.t('user.USER_NOT_SUSPENDED'),
+      );
+    }
+
+    user.status = UserStatus.ACTIVE;
+    user.suspendedAt = null;
+    user.suspendedReason = null;
+    user.suspendedByAdminId = null;
+
+    return this.userRepository.save(user);
+  }
+
+  async permanentlyDeleteUser(adminId: number, userId: number): Promise<void> {
+    if (adminId === userId) {
+      throw new BadRequestException(
+        this.i18n.t('user.CANNOT_DELETE_SELF'),
+      );
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException(this.i18n.t('user.USER_NOT_FOUND'));
+    }
+
+    await this.userRepository.manager.transaction(async (manager) => {
+      await manager.update(User, { parentId: userId }, { parentId: null });
+      await manager.delete(User, userId);
+    });
+  }
+
+  async getUserStatistics() {
+    const totalUsers = await this.userRepository.count();
+
+    const roleCountsRaw = await this.userRepository.manager.query(`
+      SELECT role, COUNT(*)::int as count
+      FROM (
+        SELECT unnest(roles) AS role
+        FROM users
+        WHERE roles IS NOT NULL AND array_length(roles, 1) > 0
+      ) AS role_list
+      GROUP BY role
+    `);
+
+    const statusCountsRaw = await this.userRepository
+      .createQueryBuilder('user')
+      .select('user.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('user.status')
+      .getRawMany();
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const newRegistrationsLast30Days = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.registration_date >= :from', { from: thirtyDaysAgo })
+      .getCount();
+
+    const roleCounts: Record<string, number> = Object.values(RolesEnum).reduce(
+      (acc, role) => ({ ...acc, [role]: 0 }),
+      {},
+    );
+
+    roleCountsRaw.forEach((row: { role: string; count: number }) => {
+      if (row.role) {
+        roleCounts[row.role] = Number(row.count);
+      }
+    });
+
+    const statusCounts: Record<string, number> = Object.values(UserStatus).reduce(
+      (acc, status) => ({ ...acc, [status]: 0 }),
+      {},
+    );
+
+    statusCountsRaw.forEach((row) => {
+      if (row.status) {
+        statusCounts[row.status] = Number(row.count);
+      }
+    });
+
+    return {
+      totalUsers,
+      roleBreakdown: roleCounts,
+      statusBreakdown: statusCounts,
+      newRegistrationsLast30Days,
+      suspendedUsers: statusCounts[UserStatus.SUSPENDED] || 0,
+      activeUsers: statusCounts[UserStatus.ACTIVE] || 0,
+    };
   }
 }

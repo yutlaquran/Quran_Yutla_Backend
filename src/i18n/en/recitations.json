@@ -10,5 +10,10 @@
   "AUDIO_BLOB_REQUIRED": "Audio recording is required",
   "FILE_TOO_LARGE": "File size exceeds 100MB limit",
   "INVALID_AUDIO_FORMAT": "Invalid audio format. Allowed: MP3, WAV, M4A, WebM, OGG",
-  "INVALID_AYAH_RANGE": "Invalid ayah range. 'From Ayah' must be less than or equal to 'To Ayah'"
+  "INVALID_AYAH_RANGE": "Invalid ayah range. 'From Ayah' must be less than or equal to 'To Ayah'",
+  "TEACHER_NOT_FOUND": "Teacher not found",
+  "TEACHER_NO_ACCESS_TO_STUDENT": "You do not have access to this student's recitations",
+  "TEACHER_EVALUATION_ALREADY_EXISTS": "Teacher evaluation already exists for this recitation",
+  "TEACHER_EVALUATION_NOT_FOUND": "No teacher evaluation found for this recitation",
+  "TEACHER_CANNOT_UPDATE_OTHER_EVALUATION": "You cannot update another teacher's evaluation"
 }

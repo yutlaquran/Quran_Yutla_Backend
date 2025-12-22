@@ -11,6 +11,9 @@ import {
   IsPositive,
   Min,
   Max,
+  IsArray,
+  ArrayMinSize,
+  ArrayMaxSize,
 } from 'class-validator';
 
 export class ParentSignUpDto {
@@ -59,6 +62,18 @@ export class ParentSignUpDto {
   @Min(1, { message: 'Number of children must be at least 1' })
   @Max(10, { message: 'Number of children cannot exceed 10' })
   numberOfChildren: number;
+
+  @ApiProperty({
+    description: 'Array of student codes for each child',
+    example: ['STU001', 'STU002'],
+    type: [String],
+  })
+  @IsNotEmpty({ message: 'Student codes are required' })
+  @IsArray({ message: 'Student codes must be an array' })
+  @ArrayMinSize(1, { message: 'At least one student code is required' })
+  @ArrayMaxSize(10, { message: 'Cannot exceed 10 student codes' })
+  @IsString({ each: true, message: 'Each student code must be a string' })
+  studentCodes: string[];
 
   @ApiProperty({
     description:

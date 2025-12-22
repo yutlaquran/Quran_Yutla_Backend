@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Delete,
@@ -10,6 +11,8 @@ import {
   UseInterceptors,
   UploadedFile,
   Query,
+  Headers,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -19,16 +22,21 @@ import {
   ApiConsumes,
   ApiBody,
   ApiBearerAuth,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { RecitationsService } from './recitations.service';
 import { CreateRecitationDto } from './dto/create-recitation.dto';
 import { CreateDirectRecitationDto } from './dto/create-direct-recitation.dto';
 import { RecitationQueryDto } from './dto/recitation-query.dto';
+import { AIWebhookRequestDto, AIWebhookResponseDto } from './dto/ai-webhook.dto';
+import { TeacherEvaluationDto } from './dto/teacher-evaluation.dto';
 import { Recitation } from './entities/recitation.entity';
 import { Auth } from '../../common/guards/auth.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { RolesEnum } from '../../common/enums/roles.enum';
 import { CurrentUser } from '../../common/guards/user.decorator';
 import { User } from '../user/entities/user.entity';
+import { ActiveSubscriptionGuard } from '../../common/guards/active-subscription.guard';
 import { SuccessResponse } from '../../common/interceptors/success-response.interceptor';
 
 @ApiTags('Recitations')
@@ -39,6 +47,7 @@ export class RecitationsController {
 
   @Post('upload')
   @Auth(RolesEnum.STUDENT)
+  @UseGuards(ActiveSubscriptionGuard)
   @UseInterceptors(FileInterceptor('audio'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
@@ -112,6 +121,7 @@ export class RecitationsController {
 
   @Post('record-direct')
   @Auth(RolesEnum.STUDENT)
+  @UseGuards(ActiveSubscriptionGuard)
   @UseInterceptors(FileInterceptor('audioBlob'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
@@ -263,6 +273,164 @@ export class RecitationsController {
     return await this.recitationsService.getStatistics(user.id);
   }
 
+  // ==================== Parent Reports ====================
+
+  @Get('parent/children')
+  @Auth(RolesEnum.PARENT)
+  @ApiOperation({
+    summary: 'Get overview of all children linked to the parent',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Children overview retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.RECITATIONS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getParentChildrenOverview(@CurrentUser() parent: User) {
+    return await this.recitationsService.getParentChildrenOverview(parent.id);
+  }
+
+  @Get('parent/children/:childId/recitations')
+  @Auth(RolesEnum.PARENT)
+  @ApiOperation({
+    summary: 'Get recitations for a specific child',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Child recitations retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.RECITATIONS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getParentChildRecitations(
+    @CurrentUser() parent: User,
+    @Param('childId', ParseIntPipe) childId: number,
+    @Query() query: RecitationQueryDto,
+  ) {
+    return await this.recitationsService.getParentChildRecitations(
+      parent.id,
+      childId,
+      query,
+    );
+  }
+
+  @Get('parent/children/:childId/statistics')
+  @Auth(RolesEnum.PARENT)
+  @ApiOperation({
+    summary: 'Get statistics for a specific child',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Child statistics retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.STATISTICS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getParentChildStatistics(
+    @CurrentUser() parent: User,
+    @Param('childId', ParseIntPipe) childId: number,
+  ) {
+    return await this.recitationsService.getParentChildStatistics(
+      parent.id,
+      childId,
+    );
+  }
+
+  // ==================== Teacher Reports ====================
+
+  @Get('teacher/students')
+  @Auth(RolesEnum.TEACHER)
+  @ApiOperation({
+    summary: 'Get overview of all students linked to the teacher',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Students overview retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.RECITATIONS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getTeacherStudentsOverview(@CurrentUser() teacher: User) {
+    return await this.recitationsService.getTeacherStudentsOverview(teacher.id);
+  }
+
+  @Get('teacher/students/:studentId/recitations')
+  @Auth(RolesEnum.TEACHER)
+  @ApiOperation({
+    summary: 'Get recitations for a specific student linked to the teacher',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Student recitations retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.RECITATIONS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getTeacherStudentRecitations(
+    @CurrentUser() teacher: User,
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @Query() query: RecitationQueryDto,
+  ) {
+    return await this.recitationsService.getTeacherStudentRecitations(
+      teacher.id,
+      studentId,
+      query,
+    );
+  }
+
+  @Get('teacher/students/:studentId/statistics')
+  @Auth(RolesEnum.TEACHER)
+  @ApiOperation({
+    summary: 'Get statistics for a specific student linked to the teacher',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Student statistics retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @SuccessResponse(
+    'recitations.STATISTICS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async getTeacherStudentStatistics(
+    @CurrentUser() teacher: User,
+    @Param('studentId', ParseIntPipe) studentId: number,
+  ) {
+    return await this.recitationsService.getTeacherStudentStatistics(
+      teacher.id,
+      studentId,
+    );
+  }
+
   @Get(':id')
   @Auth(RolesEnum.STUDENT)
   @ApiOperation({
@@ -356,5 +524,158 @@ export class RecitationsController {
   )
   async findOneAdmin(@Param('id', ParseIntPipe) id: number) {
     return await this.recitationsService.findOneAdmin(id);
+  }
+
+  @Post('webhook/ai-evaluation')
+  @Public()
+  @ApiOperation({
+    summary: 'Webhook endpoint for AI evaluation results',
+    description:
+      'This endpoint is called by the AI service after processing a recitation. It requires webhook secret authentication.',
+  })
+  @ApiHeader({
+    name: 'Authorization',
+    description: 'Bearer token with webhook secret',
+    required: true,
+  })
+  @ApiBody({
+    type: AIWebhookRequestDto,
+    description: 'AI evaluation results',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Evaluation received and saved successfully',
+    type: AIWebhookResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid webhook secret',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Recitation not found or invalid jobId',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid webhook data',
+  })
+  async handleAIWebhook(
+    @Body() webhookData: AIWebhookRequestDto,
+    @Headers('authorization') authHeader: string,
+  ): Promise<AIWebhookResponseDto> {
+    return await this.recitationsService.handleAIWebhook(webhookData, authHeader);
+  }
+
+  // ============= Teacher Evaluation Endpoints =============
+
+  @Get('teacher/:recitationId')
+  @Auth(RolesEnum.TEACHER)
+  @ApiOperation({
+    summary: 'Get recitation for teacher evaluation (Teacher only)',
+    description:
+      'Allows teacher to retrieve a student recitation with audio URL for evaluation. Teacher must have access to the student.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Recitation retrieved successfully',
+    type: Recitation,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Recitation or teacher not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Teacher does not have access to this student',
+  })
+  async getRecitationForTeacher(
+    @CurrentUser() teacher: User,
+    @Param('recitationId', ParseIntPipe) recitationId: number,
+  ): Promise<Recitation> {
+    return await this.recitationsService.getRecitationForTeacher(
+      teacher.id,
+      recitationId,
+    );
+  }
+
+  @Post('teacher/:recitationId/evaluate')
+  @Auth(RolesEnum.TEACHER)
+  @ApiOperation({
+    summary: 'Add teacher evaluation to recitation (Teacher only)',
+    description:
+      'Allows teacher to add manual evaluation (score 0-100 and optional notes) to a student recitation. Can only be done once per recitation.',
+  })
+  @ApiBody({
+    type: TeacherEvaluationDto,
+    description: 'Teacher evaluation with score and optional notes',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Teacher evaluation added successfully',
+    type: Recitation,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Evaluation already exists or invalid data',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Recitation or teacher not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Teacher does not have access to this student',
+  })
+  async addTeacherEvaluation(
+    @CurrentUser() teacher: User,
+    @Param('recitationId', ParseIntPipe) recitationId: number,
+    @Body() evaluationDto: TeacherEvaluationDto,
+  ): Promise<Recitation> {
+    return await this.recitationsService.addTeacherEvaluation(
+      teacher.id,
+      recitationId,
+      evaluationDto,
+    );
+  }
+
+  @Patch('teacher/:recitationId/evaluate')
+  @Auth(RolesEnum.TEACHER)
+  @ApiOperation({
+    summary: 'Update existing teacher evaluation (Teacher only)',
+    description:
+      'Allows teacher to update their own evaluation. Only the teacher who created the evaluation can update it.',
+  })
+  @ApiBody({
+    type: TeacherEvaluationDto,
+    description: 'Updated teacher evaluation',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Teacher evaluation updated successfully',
+    type: Recitation,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'No evaluation exists to update',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Recitation or teacher not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description:
+      'Teacher does not have access to this student or cannot update another teacher\'s evaluation',
+  })
+  async updateTeacherEvaluation(
+    @CurrentUser() teacher: User,
+    @Param('recitationId', ParseIntPipe) recitationId: number,
+    @Body() evaluationDto: TeacherEvaluationDto,
+  ): Promise<Recitation> {
+    return await this.recitationsService.updateTeacherEvaluation(
+      teacher.id,
+      recitationId,
+      evaluationDto,
+    );
   }
 }

@@ -3,7 +3,6 @@ import {
   JuzQueryDto,
   SearchQueryDto,
   SurahQueryDto,
-  SurahsListQueryDto,
 } from './dto/query.dto';
 import {
   AyahResponseDto,
@@ -143,11 +142,11 @@ export class QuranService {
   }
 
   /**
-   * Get all Surahs with pagination
-   * @param query - Query parameters (page, limit)
-   * @returns PaginatedSurahsListResponseDto
+   * Get all Surahs (all 114 surahs)
+   * @param language - Language code (default: 'ar')
+   * @returns Array of all Surahs
    */
-  async getAllSurahs() {
-    return this.quranDataService.getAllSurahs();
+  async getAllSurahs(language?: string) {
+    return this.quranDataService.getAllSurahs(language);
   }
 }

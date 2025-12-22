@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { User } from '../../user/entities/user.entity';
+import { Surah } from '../../quran/entities/surah.entity';
 
 export enum RecitationStatus {
   PENDING = 'pending',
@@ -49,6 +50,14 @@ export class Recitation {
   })
   @Column({ name: 'surah_id', type: 'int' })
   surahId: number;
+
+  @ApiPropertyOptional({
+    description: 'Surah details',
+    type: () => Surah,
+  })
+  @ManyToOne(() => Surah)
+  @JoinColumn({ name: 'surah_id' })
+  surah: Surah;
 
   @ApiProperty({
     description: 'From Ayah number',
@@ -155,6 +164,19 @@ export class Recitation {
   evaluationData: any;
 
   @ApiPropertyOptional({
+    description: 'AI service job ID for tracking async evaluation processing',
+    example: 'ai-job-12345-xyz',
+  })
+  @Column({
+    name: 'ai_job_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    comment: 'AI service job ID for tracking async evaluation processing',
+  })
+  aiJobId: string;
+
+  @ApiPropertyOptional({
     description: 'Optional notes from student',
     example: 'First attempt at Surah Al-Fatiha',
   })
@@ -164,6 +186,56 @@ export class Recitation {
     nullable: true,
   })
   notes: string;
+
+  @ApiPropertyOptional({
+    description: 'Manual teacher evaluation score (0-100)',
+    example: 90.0,
+    minimum: 0,
+    maximum: 100,
+  })
+  @Column({
+    name: 'teacher_evaluation_score',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+    comment: 'Manual teacher evaluation score (0-100)',
+  })
+  teacherEvaluationScore: number;
+
+  @ApiPropertyOptional({
+    description: 'Teacher notes and feedback',
+    example: 'Good recitation, but work on tajweed rules for letter ق',
+  })
+  @Column({
+    name: 'teacher_notes',
+    type: 'text',
+    nullable: true,
+    comment: 'Teacher notes and feedback',
+  })
+  teacherNotes: string;
+
+  @ApiPropertyOptional({
+    description: 'ID of teacher who evaluated',
+    example: 5,
+  })
+  @Column({
+    name: 'evaluated_by_teacher_id',
+    type: 'int',
+    nullable: true,
+  })
+  evaluatedByTeacherId: number;
+
+  @ApiPropertyOptional({
+    description: 'Timestamp when teacher evaluated',
+    example: '2024-01-01T10:30:00.000Z',
+  })
+  @Column({
+    name: 'teacher_evaluated_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  teacherEvaluatedAt: Date;
 
   @ApiProperty({
     description: 'Creation timestamp',

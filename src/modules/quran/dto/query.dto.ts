@@ -21,16 +21,7 @@ export class SurahQueryDto extends QuranQueryDto {
   // Inherits language, offset, limit from QuranQueryDto
 }
 
-export class SurahsListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional({
-    description: 'Language code for Quran text',
-    example: 'ar',
-    default: 'ar',
-  })
-  @IsOptional()
-  @IsString()
-  language?: string = 'ar'; // Default to Arabic
-}
+
 
 export class SearchQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({

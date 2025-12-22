@@ -12,5 +12,13 @@
   "PLAN_NOT_AVAILABLE": "الباقة المختارة غير متاحة",
   "NO_SESSIONS_REMAINING": "لم يتبقَ جلسات. تم استخدام اشتراكك بالكامل لهذا الشهر.",
   "PAYMENT_FAILED": "فشلت عملية الدفع. يرجى المحاولة مرة أخرى.",
-  "INVALID_SUBSCRIPTION_STATUS": "حالة الاشتراك غير صحيحة. قد يكون الدفع تم معالجته بالفعل."
+  "INVALID_SUBSCRIPTION_STATUS": "حالة الاشتراك غير صحيحة. قد يكون الدفع تم معالجته بالفعل.",
+  "SUBSCRIPTION_NOT_ACTIVE": "الاشتراك غير نشط. لا يمكن إيقافه.",
+  "SUBSCRIPTION_NOT_SUSPENDED": "الاشتراك غير موقوف. لا يمكن استئنافه.",
+  "SUBSCRIPTION_EXPIRED": "انتهى الاشتراك. لا يمكن استئنافه.",
+  "SUBSCRIPTION_ALREADY_CANCELLED": "الاشتراك ملغى بالفعل.",
+  "CANNOT_RENEW_CANCELLED_SUBSCRIPTION": "لا يمكن تجديد اشتراك ملغى.",
+  "SUBSCRIPTION_SUSPENDED_SUCCESSFULLY": "تم إيقاف الاشتراك بنجاح",
+  "SUBSCRIPTION_RESUMED_SUCCESSFULLY": "تم استئناف الاشتراك بنجاح",
+  "SUBSCRIPTION_RENEWED_SUCCESSFULLY": "تم تجديد الاشتراك بنجاح"
 }

@@ -12,5 +12,13 @@
   "PLAN_NOT_AVAILABLE": "Selected plan is not available",
   "NO_SESSIONS_REMAINING": "No sessions remaining. Your subscription has been used up for this month.",
   "PAYMENT_FAILED": "Payment failed. Please try again.",
-  "INVALID_SUBSCRIPTION_STATUS": "Invalid subscription status. Payment may have already been processed."
+  "INVALID_SUBSCRIPTION_STATUS": "Invalid subscription status. Payment may have already been processed.",
+  "SUBSCRIPTION_NOT_ACTIVE": "Subscription is not active. Cannot suspend.",
+  "SUBSCRIPTION_NOT_SUSPENDED": "Subscription is not suspended. Cannot resume.",
+  "SUBSCRIPTION_EXPIRED": "Subscription has expired. Cannot resume.",
+  "SUBSCRIPTION_ALREADY_CANCELLED": "Subscription is already cancelled.",
+  "CANNOT_RENEW_CANCELLED_SUBSCRIPTION": "Cannot renew a cancelled subscription.",
+  "SUBSCRIPTION_SUSPENDED_SUCCESSFULLY": "Subscription suspended successfully",
+  "SUBSCRIPTION_RESUMED_SUCCESSFULLY": "Subscription resumed successfully",
+  "SUBSCRIPTION_RENEWED_SUCCESSFULLY": "Subscription renewed successfully"
 }

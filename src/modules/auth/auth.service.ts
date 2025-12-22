@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ArrayContains, In, Repository } from 'typeorm';
 import { Token } from '../../common/entities/token.entity';
 import { AppEnv } from '../../common/enums/app-env.enum';
 import { RolesEnum } from '../../common/enums/roles.enum';
@@ -320,6 +320,36 @@ export class AuthService {
   }
 
   async parentSignup(signUpDto: ParentSignUpDto) {
+    // Validate that number of student codes matches numberOfChildren
+    if (signUpDto.studentCodes.length !== signUpDto.numberOfChildren) {
+      throw new BadRequestException(
+        this.i18n.t('auth.STUDENT_CODES_COUNT_MISMATCH', {
+          expected: signUpDto.numberOfChildren,
+          received: signUpDto.studentCodes.length,
+        }),
+      );
+    }
+
+    // Verify all student codes exist and are students
+    const students = await this.userRepository.find({
+      where: {
+        studentCode: In(signUpDto.studentCodes),
+        roles: ArrayContains([RolesEnum.STUDENT]),
+      },
+    });
+
+    if (students.length !== signUpDto.studentCodes.length) {
+      const foundCodes = students.map(s => s.studentCode);
+      const invalidCodes = signUpDto.studentCodes.filter(
+        code => !foundCodes.includes(code),
+      );
+      throw new NotFoundException(
+        this.i18n.t('auth.INVALID_STUDENT_CODES', {
+          codes: invalidCodes.join(', '),
+        }),
+      );
+    }
+
     // Check if parent already exists
     let user = await this.userRepository.findOne({
       where: [
@@ -352,7 +382,17 @@ export class AuthService {
     const savedParent = await this.userRepository.save(parent);
 
     await this.setPlayerIdForUser(savedParent, signUpDto.playerId);
-    return savedParent;
+    
+    // Return parent data with children information
+    return {
+      ...savedParent,
+      children: students.map(student => ({
+        id: student.id,
+        fullName: student.fullName,
+        studentCode: student.studentCode,
+        email: student.email,
+      })),
+    };
   }
 
   async teacherSignup(signUpDto: TeacherSignUpDto) {

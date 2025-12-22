@@ -15,6 +15,7 @@ export enum SubscriptionStatus {
   ACTIVE = 'active',
   EXPIRED = 'expired',
   CANCELLED = 'cancelled',
+  SUSPENDED = 'suspended',
   PENDING_PAYMENT = 'pending_payment',
 }
 
@@ -191,7 +192,7 @@ export class Subscription {
     type: 'timestamp',
     nullable: true,
   })
-  cancelledAt: Date;
+  cancelledAt?: Date;
 
   @ApiPropertyOptional({
     description: 'Reason for cancellation',
@@ -202,7 +203,7 @@ export class Subscription {
     type: 'text',
     nullable: true,
   })
-  cancellationReason: string;
+  cancellationReason?: string;
 
   @ApiProperty({
     description: 'Creation timestamp',

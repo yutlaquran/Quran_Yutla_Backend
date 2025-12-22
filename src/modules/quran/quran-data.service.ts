@@ -529,11 +529,11 @@ export class QuranDataService {
   }
 
   /**
-   * Get all Surahs with pagination
-   * @param query - Query parameters (page, limit)
-   * @returns PaginatedSurahsListResponseDto
+   * Get all Surahs (all 114 surahs)
+   * @param language - Language code (default: 'ar')
+   * @returns Array of all Surahs
    */
-  async getAllSurahs() {
+  async getAllSurahs(language: string = 'ar') {
     // Get all surahs from repository
     const allSurahs = await this.quranRepository.getAllSurahs();
 
