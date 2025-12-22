@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { Recitation, RecitationStatus } from './entities/recitation.entity';
 import { CreateRecitationDto } from './dto/create-recitation.dto';
+import { CreateDirectRecitationDto } from './dto/create-direct-recitation.dto';
 import { RecitationQueryDto } from './dto/recitation-query.dto';
 import { CustomI18nService } from '../../common/services/custom-i18n.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
@@ -94,6 +95,122 @@ export class RecitationsService {
     await this.subscriptionsService.decrementSession(userId);
 
     return savedRecitation;
+  }
+
+  async createDirectRecording(
+    userId: number,
+    createDirectRecitationDto: CreateDirectRecitationDto,
+    audioBlob: Express.Multer.File,
+  ): Promise<Recitation> {
+    // Check subscription and sessions
+    const canRecord = await this.subscriptionsService.canRecordRecitation(userId);
+    
+    if (!canRecord.allowed) {
+      throw new ForbiddenException(canRecord.reason);
+    }
+
+    // Validate audio blob
+    if (!audioBlob) {
+      throw new BadRequestException(
+        this.i18n.t('recitations.AUDIO_BLOB_REQUIRED'),
+      );
+    }
+
+    if (audioBlob.size > this.MAX_FILE_SIZE) {
+      throw new BadRequestException(
+        this.i18n.t('recitations.FILE_TOO_LARGE'),
+      );
+    }
+
+    // Validate audio format - support common web recording formats
+    const allowedMimeTypes = [
+      'audio/webm',
+      'audio/webm;codecs=opus',
+      'audio/ogg',
+      'audio/ogg;codecs=opus',
+      'audio/mp4',
+      'audio/mpeg',
+      'audio/wav',
+      'audio/x-wav',
+      'video/webm', // Sometimes MediaRecorder uses video/webm for audio
+    ];
+    
+    if (!allowedMimeTypes.includes(audioBlob.mimetype)) {
+      throw new BadRequestException(
+        this.i18n.t('recitations.INVALID_AUDIO_FORMAT') + ` (${audioBlob.mimetype})`,
+      );
+    }
+
+    // Validate ayah range
+    if (createDirectRecitationDto.fromAyah > createDirectRecitationDto.toAyah) {
+      throw new BadRequestException(
+        this.i18n.t('recitations.INVALID_AYAH_RANGE'),
+      );
+    }
+
+    // Determine file extension based on format
+    const audioFormat = createDirectRecitationDto.audioFormat || 'webm';
+    const fileExtension = this.getFileExtension(audioBlob.mimetype, audioFormat);
+
+    // Update filename with correct extension
+    const originalName = audioBlob.originalname || 'recording';
+    const baseName = originalName.replace(/\.[^/.]+$/, '');
+    audioBlob.originalname = `${baseName}.${fileExtension}`;
+
+    // Upload to S3
+    const uploadResult = await this.fileUploadService.processAndSaveFile(
+      audioBlob,
+      'recitations',
+    );
+
+    // Get audio duration (approximate from file size)
+    const approximateDuration = Math.floor(audioBlob.size / 16000); // Rough estimate
+
+    // Create recitation record
+    const recitation = this.recitationRepository.create({
+      userId,
+      surahId: createDirectRecitationDto.surahId,
+      fromAyah: createDirectRecitationDto.fromAyah,
+      toAyah: createDirectRecitationDto.toAyah,
+      audioUrl: uploadResult.url,
+      audioKey: uploadResult.filename,
+      duration: approximateDuration,
+      fileSize: uploadResult.size,
+      notes: createDirectRecitationDto.notes,
+      status: RecitationStatus.PENDING,
+    });
+
+    const savedRecitation = await this.recitationRepository.save(recitation);
+
+    // Decrement user's remaining sessions
+    await this.subscriptionsService.decrementSession(userId);
+
+    return savedRecitation;
+  }
+
+  /**
+   * Helper method to determine file extension based on MIME type
+   */
+  private getFileExtension(mimeType: string, requestedFormat?: string): string {
+    // If format is explicitly requested, use it
+    if (requestedFormat) {
+      return requestedFormat;
+    }
+
+    // Map MIME types to extensions
+    const mimeToExtension: Record<string, string> = {
+      'audio/webm': 'webm',
+      'audio/webm;codecs=opus': 'webm',
+      'audio/ogg': 'ogg',
+      'audio/ogg;codecs=opus': 'ogg',
+      'audio/mp4': 'mp4',
+      'audio/mpeg': 'mp3',
+      'audio/wav': 'wav',
+      'audio/x-wav': 'wav',
+      'video/webm': 'webm',
+    };
+
+    return mimeToExtension[mimeType] || 'webm';
   }
 
   async findAll(

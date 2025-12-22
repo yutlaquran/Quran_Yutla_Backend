@@ -1,12 +1,14 @@
 {
   "RECITATION_UPLOADED_SUCCESSFULLY": "تم رفع التلاوة بنجاح",
+  "DIRECT_RECITATION_UPLOADED_SUCCESSFULLY": "تم تسجيل ورفع التسميع المباشر بنجاح",
   "RECITATION_RETRIEVED_SUCCESSFULLY": "تم جلب التلاوة بنجاح",
   "RECITATIONS_RETRIEVED_SUCCESSFULLY": "تم جلب التلاوات بنجاح",
   "RECITATION_DELETED_SUCCESSFULLY": "تم حذف التلاوة بنجاح",
   "STATISTICS_RETRIEVED_SUCCESSFULLY": "تم جلب الإحصائيات بنجاح",
   "RECITATION_NOT_FOUND": "التلاوة غير موجودة",
   "AUDIO_FILE_REQUIRED": "ملف الصوت مطلوب",
+  "AUDIO_BLOB_REQUIRED": "تسجيل الصوت مطلوب",
   "FILE_TOO_LARGE": "حجم الملف يتجاوز الحد الأقصى 100 ميجابايت",
-  "INVALID_AUDIO_FORMAT": "صيغة الصوت غير صحيحة. الصيغ المسموحة: MP3, WAV, M4A",
+  "INVALID_AUDIO_FORMAT": "صيغة الصوت غير صحيحة. الصيغ المسموحة: MP3, WAV, M4A, WebM, OGG",
   "INVALID_AYAH_RANGE": "نطاق الآيات غير صحيح. يجب أن يكون رقم الآية 'من' أقل من أو يساوي رقم الآية 'إلى'"
 }

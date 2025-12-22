@@ -5,6 +5,7 @@ import { SubscriptionsController } from './subscriptions.controller';
 import { Subscription } from './entities/subscription.entity';
 import { PlansModule } from '../plans/plans.module';
 import { CustomI18nModule } from '../../common/services/custom-i18n.module';
+import { PaymobService } from '../../common/services/paymob.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { CustomI18nModule } from '../../common/services/custom-i18n.module';
     CustomI18nModule,
   ],
   controllers: [SubscriptionsController],
-  providers: [SubscriptionsService],
+  providers: [SubscriptionsService, PaymobService],
   exports: [SubscriptionsService],
 })
 export class SubscriptionsModule {}

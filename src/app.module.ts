@@ -10,6 +10,7 @@ import { AppService } from './app.service';
 import JWTConfig from './common/config/JWT-config';
 import appConfig from './common/config/app.config';
 import OvhStorageConfig from './common/config/cloud-storage.config';
+import paymobConfig from './common/config/paymob.config';
 import { dataSourceOptions } from './common/config/datasource-config';
 import { CustomI18nModule } from './common/services/custom-i18n.module';
 import { LoggerMiddleware } from './logger.middleware';
@@ -31,7 +32,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [JWTConfig, appConfig, OvhStorageConfig],
+      load: [JWTConfig, appConfig, OvhStorageConfig, paymobConfig],
       envFilePath: ['.env'],
       cache: true,
     }),
@@ -53,18 +54,18 @@ import { TasksModule } from './modules/tasks/tasks.module';
         },
       ],
     }),
+    AuthModule,
     UserModule,
     EmailVerificationModule,
-    AuthModule,
-    FaqModule,
-    QuranModule,
-    QuranAudioModule,
-    AppSettingsModule,
-    NotificationModule,
-    AppVersionModule,
     PlansModule,
     SubscriptionsModule,
     RecitationsModule,
+    QuranModule,
+    QuranAudioModule,
+    AppVersionModule,
+    NotificationModule,
+    AppSettingsModule,
+    FaqModule,
     TasksModule,
   ],
   controllers: [AppController],

@@ -22,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { RecitationsService } from './recitations.service';
 import { CreateRecitationDto } from './dto/create-recitation.dto';
+import { CreateDirectRecitationDto } from './dto/create-direct-recitation.dto';
 import { RecitationQueryDto } from './dto/recitation-query.dto';
 import { Recitation } from './entities/recitation.entity';
 import { Auth } from '../../common/guards/auth.decorator';
@@ -106,6 +107,85 @@ export class RecitationsController {
       user.id,
       createRecitationDto,
       file,
+    );
+  }
+
+  @Post('record-direct')
+  @Auth(RolesEnum.STUDENT)
+  @UseInterceptors(FileInterceptor('audioBlob'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Record recitation directly (Student only)',
+    description: 'Upload audio blob from direct recording in the app',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['audioBlob', 'surahId', 'fromAyah', 'toAyah'],
+      properties: {
+        audioBlob: {
+          type: 'string',
+          format: 'binary',
+          description: 'Audio blob from MediaRecorder (WebM, MP4, WAV - max 100MB)',
+        },
+        surahId: {
+          type: 'number',
+          example: 1,
+          description: 'Surah ID (1-114)',
+        },
+        fromAyah: {
+          type: 'number',
+          example: 1,
+          description: 'Starting Ayah number',
+        },
+        toAyah: {
+          type: 'number',
+          example: 7,
+          description: 'Ending Ayah number',
+        },
+        notes: {
+          type: 'string',
+          example: 'Direct recording from app',
+          description: 'Optional notes',
+        },
+        audioFormat: {
+          type: 'string',
+          example: 'webm',
+          description: 'Audio format (webm, mp4, wav, etc.)',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Direct recitation uploaded successfully',
+    type: Recitation,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid audio blob or size, or no active subscription',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized - Invalid or missing token',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Student role required or no remaining sessions',
+  })
+  @SuccessResponse(
+    'recitations.DIRECT_RECITATION_UPLOADED_SUCCESSFULLY',
+    HttpStatus.CREATED,
+  )
+  async recordDirect(
+    @CurrentUser() user: User,
+    @Body() createDirectRecitationDto: CreateDirectRecitationDto,
+    @UploadedFile() audioBlob: Express.Multer.File,
+  ) {
+    return await this.recitationsService.createDirectRecording(
+      user.id,
+      createDirectRecitationDto,
+      audioBlob,
     );
   }
 

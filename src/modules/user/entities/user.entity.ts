@@ -128,6 +128,13 @@ export class User extends BaseEntity {
   })
   studentCode: string;
 
+  @Column({
+    name: 'number_of_children',
+    type: 'integer',
+    nullable: true,
+  })
+  numberOfChildren: number;
+
   // ==================== Relations ====================
 
   // Parent-Children relation (one parent can have many children)

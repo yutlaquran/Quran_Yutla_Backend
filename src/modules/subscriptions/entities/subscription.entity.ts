@@ -149,6 +149,18 @@ export class Subscription {
   paymentMethod: string;
 
   @ApiPropertyOptional({
+    description: 'Payment transaction ID',
+    example: 'txn_1234567890',
+  })
+  @Column({
+    name: 'transaction_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  transactionId: string;
+
+  @ApiPropertyOptional({
     description: 'Last payment date',
     example: '2024-01-01T00:00:00.000Z',
   })

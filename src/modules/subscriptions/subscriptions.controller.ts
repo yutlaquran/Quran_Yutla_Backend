@@ -17,6 +17,8 @@ import {
 import { SubscriptionsService } from './subscriptions.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
+import { InitiatePaymentDto } from './dto/initiate-payment.dto';
+import { VerifyPaymentDto } from './dto/verify-payment.dto';
 import { Subscription } from './entities/subscription.entity';
 import { Auth } from '../../common/guards/auth.decorator';
 import { RolesEnum } from '../../common/enums/roles.enum';
@@ -30,10 +32,96 @@ import { SuccessResponse } from '../../common/interceptors/success-response.inte
 export class SubscriptionsController {
   constructor(private readonly subscriptionsService: SubscriptionsService) {}
 
+  @Post('initiate-payment')
+  @Auth(RolesEnum.STUDENT)
+  @ApiOperation({
+    summary: 'Initiate payment for subscription (Student only)',
+    description: 'Creates a pending subscription and returns payment URL for card payment',
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Payment initiated successfully, returns payment URL',
+    schema: {
+      properties: {
+        subscriptionId: { type: 'number', example: 123 },
+        paymentUrl: { type: 'string', example: 'https://payment.gateway.com/checkout/session_123' },
+        sessionId: { type: 'string', example: 'session_123_1234567890' },
+        amount: { type: 'number', example: 50 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid plan or user already has active subscription',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized - Invalid or missing token',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Student role required',
+  })
+  @SuccessResponse(
+    'subscriptions.PAYMENT_INITIATED_SUCCESSFULLY',
+    HttpStatus.CREATED,
+  )
+  async initiatePayment(
+    @CurrentUser() user: User,
+    @Body() initiatePaymentDto: InitiatePaymentDto,
+  ) {
+    return await this.subscriptionsService.initiatePayment(
+      user.id,
+      initiatePaymentDto,
+    );
+  }
+
+  @Post('verify-payment')
+  @Auth(RolesEnum.STUDENT)
+  @ApiOperation({
+    summary: 'Verify payment and activate subscription',
+    description: 'Called after successful payment to activate the subscription',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Payment verified and subscription activated',
+    type: Subscription,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Payment failed or invalid transaction',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Subscription not found',
+  })
+  @SuccessResponse(
+    'subscriptions.SUBSCRIPTION_ACTIVATED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async verifyPayment(@Body() verifyPaymentDto: VerifyPaymentDto) {
+    return await this.subscriptionsService.verifyPayment(verifyPaymentDto);
+  }
+
+  @Post('webhook/paymob')
+  @ApiOperation({
+    summary: 'Paymob webhook callback',
+    description: 'Receives payment notifications from Paymob',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Webhook processed successfully',
+  })
+  async paymobWebhook(@Body() webhookData: any) {
+    return await this.subscriptionsService.handlePaymobWebhook(webhookData);
+  }
+
   @Post('subscribe')
   @Auth(RolesEnum.STUDENT)
   @ApiOperation({
-    summary: 'Create a new subscription (Student only)',
+    summary: 'Create a new subscription (Student only) - Deprecated',
+    deprecated: true,
+    description: 'Use /initiate-payment instead',
   })
   @ApiResponse({
     status: HttpStatus.CREATED,

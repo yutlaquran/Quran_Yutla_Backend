@@ -27,16 +27,16 @@ export function setupSwagger(app: INestApplication) {
     include: [
       AuthModule,
       UserModule,
+      EmailVerificationModule,
       PlansModule,
       SubscriptionsModule,
       RecitationsModule,
       QuranModule,
       QuranAudioModule,
-      EmailVerificationModule,
-      FaqModule,
+      AppVersionModule,
       NotificationModule,
       AppSettingsModule,
-      AppVersionModule,
+      FaqModule,
     ],
   });
 
