@@ -20,13 +20,12 @@ export class UserService {
   }
 
   async findAll(query: UserQueryDto) {
-    let { keyword, email, role, phoneNumber, nationalId, fullName } = query;
+    let { keyword, email, role, phoneNumber, fullName } = query;
 
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
       .select([
         'user.id',
-        'user.nationalId',
         'user.email',
         'user.fullName',
         'user.phoneNumber',
@@ -38,6 +37,7 @@ export class UserService {
         'user.country',
         'user.ageGroup',
         'user.profileImageUrl',
+        'user.studentCode',
       ])
       .where('user.isEmailVerified = :isEmailVerified', {
         isEmailVerified: true,
@@ -47,8 +47,8 @@ export class UserService {
       queryBuilder.andWhere(
         '(user.email ILIKE :search OR ' +
           'user.phoneNumber ILIKE :search OR ' +
-          'user.nationalId ILIKE :search OR ' +
-          'user.fullName ILIKE :search)',
+          'user.fullName ILIKE :search OR ' +
+          'user.studentCode ILIKE :search)',
         { search: `%${keyword}%` },
       );
     }
@@ -64,12 +64,6 @@ export class UserService {
     if (phoneNumber) {
       queryBuilder.andWhere('user.phoneNumber ILIKE :phoneNumber', {
         phoneNumber: `%${phoneNumber}%`,
-      });
-    }
-
-    if (nationalId) {
-      queryBuilder.andWhere('user.nationalId = :nationalId', {
-        nationalId,
       });
     }
 
@@ -102,17 +96,17 @@ export class UserService {
         'email',
         'phoneNumber',
         'fullName',
-        'nationalId',
         'gender',
         'country',
         'ageGroup',
         'registrationDate',
         'isEmailVerified',
         'roles',
-        'nationalImageUrl',
         'profileImageUrl',
         'dateOfBirth',
         'playerIds',
+        'studentCode',
+        'parentId',
       ],
     });
 

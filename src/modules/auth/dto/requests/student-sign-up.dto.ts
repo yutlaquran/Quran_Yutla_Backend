@@ -74,16 +74,6 @@ export class StudentSignUpDto {
   @IsEnum(Gender, { message: 'Please select a valid gender' })
   gender?: Gender;
 
-  @ApiPropertyOptional({
-    description: 'National ID',
-    example: '29912011234567',
-    maxLength: 20,
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(20, { message: 'National ID cannot exceed 20 characters' })
-  nationalId?: string;
-
   @ApiProperty({
     description:
       'Password (min 8 characters with uppercase, lowercase, number and special character)',

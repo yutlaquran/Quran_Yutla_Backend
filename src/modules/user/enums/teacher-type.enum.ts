@@ -1,5 +1,5 @@
 export enum TeacherType {
-  PRIMARY = 'primary',
-  SECONDARY = 'secondary',
-  TERTIARY = 'tertiary',
+  QURAN_TEACHER = 'quran_teacher',
+  TAJWEED_TEACHER = 'tajweed_teacher',
+  MEMORIZATION_TEACHER = 'memorization_teacher',
 }

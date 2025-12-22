@@ -14,12 +14,13 @@ import { MailerModule } from '@nestjs-modules/mailer';
       useFactory: async (configService: ConfigService) => {
         const transport = {
           host: configService.getOrThrow<string>('SMTP_HOST'),
-          port: configService.getOrThrow<number>('SMTP_PORT'),
-          secure: configService.getOrThrow<boolean>('SMTP_SECURE'),
+          port: parseInt(configService.getOrThrow<string>('SMTP_PORT')),
+          secure: false,
           auth: {
             user: configService.getOrThrow<string>('SMTP_USER'),
-            pass: '$KO^]49j',
+            pass: configService.getOrThrow<string>('SMTP_PASS'),
           },
+          requireTLS: true
         };
         return {
           transport,

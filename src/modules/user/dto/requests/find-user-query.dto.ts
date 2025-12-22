@@ -25,11 +25,6 @@ export class UserQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString({ message: 'validation.STRING' })
   @MaxLength(50, { message: 'validation.MAX_LENGTH' })
-  nationalId?: string;
-
-  @IsOptional()
-  @IsString({ message: 'validation.STRING' })
-  @MaxLength(50, { message: 'validation.MAX_LENGTH' })
   phoneNumber?: string;
 
   @IsOptional()

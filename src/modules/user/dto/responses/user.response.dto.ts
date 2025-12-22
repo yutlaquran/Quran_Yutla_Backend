@@ -7,8 +7,6 @@ export class UserResponseDto {
 
   fullName: string;
 
-  nationalId: string;
-
   memberShipId: string;
 
   phoneNumber: string;
