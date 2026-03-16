@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CustomI18nService } from 'src/common/services/custom-i18n.service';
 import { PaginationService } from 'src/common/utils/pagination.utils';
 import { Repository } from 'typeorm';
+import { EmailVerification } from '../email-verification/entities/email-verification.entity';
+import { NotificationRecipient } from '../notification/entities/notification-recipient.entity';
 import { UserQueryDto } from './dto/requests/find-user-query.dto';
 import { UpdateUserServiceDto } from './dto/requests/update-user-service.dto';
 import { User } from './entities/user.entity';
@@ -365,6 +367,17 @@ export class UserService {
     }
 
     await this.userRepository.manager.transaction(async (manager) => {
+      await manager.delete(EmailVerification, { userId });
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from(NotificationRecipient)
+        .where('"userId" = :userId', { userId })
+        .execute();
+      await manager.query(
+        'DELETE FROM "teacher_students" WHERE "teacher_id" = $1 OR "student_id" = $1',
+        [userId],
+      );
       await manager.update(User, { parentId: userId }, { parentId: null });
       await manager.delete(User, userId);
     });

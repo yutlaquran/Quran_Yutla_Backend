@@ -37,7 +37,7 @@ export class EmailVerification {
   @Column({ default: false })
   isForPasswordReset: boolean;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 }

@@ -87,20 +87,6 @@ export class UserController {
     return { deleted: true };
   }
 
-  @Get(':id')
-  @SuccessResponse('User retrieved successfully', 200)
-  @UseGuards(JwtAuthGuard)
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.findOne(id);
-  }
-
-  @Delete(':id')
-  @SuccessResponse('User deleted successfully', 200)
-  @UseGuards(JwtAuthGuard)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.remove(id);
-  }
-
   // ==================== Parent-Child Linking ====================
 
   @Post('link-parent')
@@ -162,5 +148,19 @@ export class UserController {
   @SuccessResponse('Students retrieved successfully', 200)
   async getStudents(@CurrentUser() teacher: User) {
     return await this.userService.getStudents(teacher.id);
+  }
+
+  @Get(':id')
+  @SuccessResponse('User retrieved successfully', 200)
+  @UseGuards(JwtAuthGuard)
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.findOne(id);
+  }
+
+  @Delete(':id')
+  @SuccessResponse('User deleted successfully', 200)
+  @UseGuards(JwtAuthGuard)
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.userService.remove(id);
   }
 }

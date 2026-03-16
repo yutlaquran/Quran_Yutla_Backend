@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  JoinColumn,
+  ManyToOne,
+} from 'typeorm';
 import { Notification } from './notification.entity';
 import { User } from '../../user/entities/user.entity';
 
@@ -10,7 +16,10 @@ export class NotificationRecipient {
   @ManyToOne(() => Notification, (notification) => notification.recipients)
   notification: Notification;
 
-  @ManyToOne(() => User, (user) => user.notifications)
+  @ManyToOne(() => User, (user) => user.notifications, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
   @Column({ type: 'boolean', default: false })

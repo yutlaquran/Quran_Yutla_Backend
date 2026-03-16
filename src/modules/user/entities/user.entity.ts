@@ -155,7 +155,10 @@ export class User extends BaseEntity {
   // ==================== Relations ====================
 
   // Parent-Children relation (one parent can have many children)
-  @ManyToOne(() => User, (user) => user.children, { nullable: true })
+  @ManyToOne(() => User, (user) => user.children, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'parent_id' })
   parent: User;
 
