@@ -8,8 +8,10 @@
   "RECORDING_PERMISSION_CHECKED": "تم التحقق من أذونات التسجيل بنجاح",
   "SUBSCRIPTION_NOT_FOUND": "الاشتراك غير موجود",
   "NO_ACTIVE_SUBSCRIPTION": "لا يوجد اشتراك نشط. يرجى الاشتراك في باقة أولاً.",
+  "NO_ACTIVE_PLANS_CONFIGURED": "لا توجد باقات نشطة مهيأة حالياً. يرجى التواصل مع الدعم أو المحاولة لاحقاً.",
   "ACTIVE_SUBSCRIPTION_EXISTS": "لديك بالفعل اشتراك نشط",
   "PLAN_NOT_AVAILABLE": "الباقة المختارة غير متاحة",
+  "USER_COUNTRY_REQUIRED_FOR_PRICING": "يرجى تحديد الدولة في الملف الشخصي قبل بدء الدفع.",
   "NO_SESSIONS_REMAINING": "لم يتبقَ جلسات. تم استخدام اشتراكك بالكامل لهذا الشهر.",
   "PAYMENT_FAILED": "فشلت عملية الدفع. يرجى المحاولة مرة أخرى.",
   "INVALID_SUBSCRIPTION_STATUS": "حالة الاشتراك غير صحيحة. قد يكون الدفع تم معالجته بالفعل.",
@@ -20,5 +22,7 @@
   "CANNOT_RENEW_CANCELLED_SUBSCRIPTION": "لا يمكن تجديد اشتراك ملغى.",
   "SUBSCRIPTION_SUSPENDED_SUCCESSFULLY": "تم إيقاف الاشتراك بنجاح",
   "SUBSCRIPTION_RESUMED_SUCCESSFULLY": "تم استئناف الاشتراك بنجاح",
-  "SUBSCRIPTION_RENEWED_SUCCESSFULLY": "تم تجديد الاشتراك بنجاح"
+  "SUBSCRIPTION_RENEWED_SUCCESSFULLY": "تم تجديد الاشتراك بنجاح",
+  "DEV_ONLY_ENDPOINT": "هذا المسار متاح فقط في بيئات التطوير.",
+  "DEV_TEST_SUBSCRIPTION_ACTIVATED": "تم تفعيل اشتراك اختبار التطوير بنجاح"
 }

@@ -4,7 +4,9 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
+  ForbiddenException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { Subscription, SubscriptionStatus } from './entities/subscription.entity';
@@ -20,12 +22,55 @@ import { PaymobService } from '../../common/services/paymob.service';
 @Injectable()
 export class SubscriptionsService {
   private readonly logger = new Logger(SubscriptionsService.name);
+
+  private buildPricingSnapshot(
+    plan: {
+      basePrice: number;
+      countryPricing?: Record<string, number>;
+      discountPercentage?: number;
+    },
+    userCountry: string,
+  ): {
+    pricingCountry: string;
+    originalPrice: number;
+    discountPercentageApplied: number;
+    finalAmount: number;
+    currency: string;
+  } {
+    const basePrice = Number(plan.basePrice);
+    const countryPrice = plan.countryPricing?.[userCountry];
+    const originalPrice = Number(
+      countryPrice !== undefined ? countryPrice : basePrice,
+    );
+    const discountPercentageApplied = Number(plan.discountPercentage ?? 0);
+    const discounted =
+      originalPrice - (originalPrice * discountPercentageApplied) / 100;
+    const finalAmount = this.roundToTwoDecimals(Math.max(0, discounted));
+    const currency =
+      this.configService.get<string>('PAYMOB_CURRENCY') || 'EGP';
+
+    return {
+      pricingCountry: userCountry,
+      originalPrice: this.roundToTwoDecimals(originalPrice),
+      discountPercentageApplied: this.roundToTwoDecimals(
+        discountPercentageApplied,
+      ),
+      finalAmount,
+      currency,
+    };
+  }
+
+  private roundToTwoDecimals(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
+
   constructor(
     @InjectRepository(Subscription)
     private readonly subscriptionRepository: Repository<Subscription>,
     private readonly plansService: PlansService,
     private readonly paymobService: PaymobService,
     private readonly i18n: CustomI18nService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -40,6 +85,7 @@ export class SubscriptionsService {
     paymentUrl: string;
     sessionId: string;
     amount: number;
+    currency: string;
   }> {
     // Check if user already has an active subscription
     const existingSubscription = await this.subscriptionRepository.findOne({
@@ -64,6 +110,23 @@ export class SubscriptionsService {
       );
     }
 
+    // Get user details for Paymob
+    const user = await this.subscriptionRepository.manager.findOne(User, {
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(this.i18n.t('user.USER_NOT_FOUND'));
+    }
+
+    if (!user.country) {
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.USER_COUNTRY_REQUIRED_FOR_PRICING'),
+      );
+    }
+
+    const pricingSnapshot = this.buildPricingSnapshot(plan, user.country);
+
     // Create subscription (pending payment)
     const subscription = this.subscriptionRepository.create({
       userId,
@@ -74,26 +137,22 @@ export class SubscriptionsService {
       autoRenew: initiatePaymentDto.autoRenew ?? false,
       paymentMethod: 'card',
       status: SubscriptionStatus.PENDING_PAYMENT,
+      pricingCountry: pricingSnapshot.pricingCountry,
+      originalPrice: pricingSnapshot.originalPrice,
+      discountPercentageApplied: pricingSnapshot.discountPercentageApplied,
+      finalAmount: pricingSnapshot.finalAmount,
+      currency: pricingSnapshot.currency,
     });
 
     const savedSubscription = await this.subscriptionRepository.save(subscription);
-
-    // Get user details for Paymob
-    const user = await this.subscriptionRepository.manager.findOne(User, {
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException(this.i18n.t('user.USER_NOT_FOUND'));
-    }
 
     // Create Paymob payment
     try {
       const paymobResponse = await this.paymobService.createPayment(
         {
           orderId: `SUB-${savedSubscription.id}`,
-          amount: plan.basePrice,
-          currency: 'EGP',
+          amount: pricingSnapshot.finalAmount,
+          currency: pricingSnapshot.currency,
           firstName: user.fullName?.split(' ')[0] || 'Student',
           lastName: user.fullName?.split(' ').slice(1).join(' ') || 'User',
           email: user.email,
@@ -106,7 +165,8 @@ export class SubscriptionsService {
         subscriptionId: savedSubscription.id,
         paymentUrl: paymobResponse.paymentUrl,
         sessionId: paymobResponse.paymentToken,
-        amount: plan.basePrice,
+        amount: pricingSnapshot.finalAmount,
+        currency: pricingSnapshot.currency,
       };
     } catch (error) {
       // Delete subscription if payment initiation fails
@@ -424,9 +484,13 @@ export class SubscriptionsService {
     const subscription = await this.findUserSubscription(userId);
 
     if (!subscription) {
+      const hasActivePlans = await this.plansService.hasActivePlans();
+
       return {
         allowed: false,
-        reason: this.i18n.t('subscriptions.NO_ACTIVE_SUBSCRIPTION'),
+        reason: hasActivePlans
+          ? this.i18n.t('subscriptions.NO_ACTIVE_SUBSCRIPTION')
+          : this.i18n.t('subscriptions.NO_ACTIVE_PLANS_CONFIGURED'),
       };
     }
 
@@ -442,6 +506,69 @@ export class SubscriptionsService {
       allowed: true,
       remainingSessions: subscription.remainingSessions,
     };
+  }
+
+  async activateTestSubscriptionForDev(
+    userId: number,
+    planId?: number,
+  ): Promise<Subscription> {
+    const appEnv = this.configService.get<string>('APP_ENV') || process.env.APP_ENV;
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV;
+    const isProduction = appEnv === 'production' || nodeEnv === 'production';
+
+    if (isProduction) {
+      throw new ForbiddenException(
+        this.i18n.t('subscriptions.DEV_ONLY_ENDPOINT'),
+      );
+    }
+
+    const existingSubscription = await this.findUserSubscription(userId);
+    if (existingSubscription) {
+      return existingSubscription;
+    }
+
+    await this.plansService.ensureDefaultPlansSeeded();
+
+    let selectedPlan;
+    if (planId) {
+      selectedPlan = await this.plansService.findOne(planId);
+      if (!selectedPlan.isActive) {
+        throw new BadRequestException(
+          this.i18n.t('subscriptions.PLAN_NOT_AVAILABLE'),
+        );
+      }
+    } else {
+      const activePlans = await this.plansService.findAll();
+      selectedPlan = activePlans[0];
+    }
+
+    if (!selectedPlan) {
+      throw new BadRequestException(
+        this.i18n.t('subscriptions.NO_ACTIVE_PLANS_CONFIGURED'),
+      );
+    }
+
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + selectedPlan.durationDays);
+
+    const subscription = this.subscriptionRepository.create({
+      userId,
+      planId: selectedPlan.id,
+      totalSessions: selectedPlan.sessionCount,
+      remainingSessions: selectedPlan.sessionCount,
+      sessionDuration: selectedPlan.sessionDuration,
+      autoRenew: false,
+      paymentMethod: 'dev-test',
+      status: SubscriptionStatus.ACTIVE,
+      startDate: now,
+      endDate,
+      lastPaymentDate: now,
+      nextBillingDate: endDate,
+      transactionId: `DEV-${userId}-${Date.now()}`,
+    });
+
+    return await this.subscriptionRepository.save(subscription);
   }
 
   /**

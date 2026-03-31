@@ -162,6 +162,69 @@ export class Subscription {
   transactionId: string;
 
   @ApiPropertyOptional({
+    description: 'Country used for pricing snapshot',
+    example: 'Egypt',
+  })
+  @Column({
+    name: 'pricing_country',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  pricingCountry: string;
+
+  @ApiPropertyOptional({
+    description: 'Original plan price before discount for selected country',
+    example: 500,
+  })
+  @Column({
+    name: 'original_price',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  originalPrice: number;
+
+  @ApiPropertyOptional({
+    description: 'Discount percentage applied when payment started',
+    example: 10,
+  })
+  @Column({
+    name: 'discount_percentage_applied',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
+  discountPercentageApplied: number;
+
+  @ApiPropertyOptional({
+    description: 'Final amount charged after discount',
+    example: 450,
+  })
+  @Column({
+    name: 'final_amount',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  finalAmount: number;
+
+  @ApiPropertyOptional({
+    description: 'Currency used for payment',
+    example: 'EGP',
+  })
+  @Column({
+    name: 'currency',
+    type: 'varchar',
+    length: 10,
+    nullable: true,
+  })
+  currency: string;
+
+  @ApiPropertyOptional({
     description: 'Last payment date',
     example: '2024-01-01T00:00:00.000Z',
   })

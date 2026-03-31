@@ -8,8 +8,10 @@
   "RECORDING_PERMISSION_CHECKED": "Recording permission checked successfully",
   "SUBSCRIPTION_NOT_FOUND": "Subscription not found",
   "NO_ACTIVE_SUBSCRIPTION": "No active subscription found. Please subscribe to a plan first.",
+  "NO_ACTIVE_PLANS_CONFIGURED": "No active plans are configured yet. Please contact support or try again later.",
   "ACTIVE_SUBSCRIPTION_EXISTS": "You already have an active subscription",
   "PLAN_NOT_AVAILABLE": "Selected plan is not available",
+  "USER_COUNTRY_REQUIRED_FOR_PRICING": "Please set your country in profile before starting payment.",
   "NO_SESSIONS_REMAINING": "No sessions remaining. Your subscription has been used up for this month.",
   "PAYMENT_FAILED": "Payment failed. Please try again.",
   "INVALID_SUBSCRIPTION_STATUS": "Invalid subscription status. Payment may have already been processed.",
@@ -20,5 +22,7 @@
   "CANNOT_RENEW_CANCELLED_SUBSCRIPTION": "Cannot renew a cancelled subscription.",
   "SUBSCRIPTION_SUSPENDED_SUCCESSFULLY": "Subscription suspended successfully",
   "SUBSCRIPTION_RESUMED_SUCCESSFULLY": "Subscription resumed successfully",
-  "SUBSCRIPTION_RENEWED_SUCCESSFULLY": "Subscription renewed successfully"
+  "SUBSCRIPTION_RENEWED_SUCCESSFULLY": "Subscription renewed successfully",
+  "DEV_ONLY_ENDPOINT": "This endpoint is only available in development environments.",
+  "DEV_TEST_SUBSCRIPTION_ACTIVATED": "Development test subscription activated successfully"
 }

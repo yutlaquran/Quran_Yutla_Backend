@@ -13,6 +13,7 @@ import {
   Query,
   Headers,
   UseGuards,
+  SetMetadata,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -37,6 +38,8 @@ import { RolesEnum } from '../../common/enums/roles.enum';
 import { CurrentUser } from '../../common/guards/user.decorator';
 import { User } from '../user/entities/user.entity';
 import { ActiveSubscriptionGuard } from '../../common/guards/active-subscription.guard';
+import { JwtAuthGuard } from '../../common/guards/auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { SuccessResponse } from '../../common/interceptors/success-response.interceptor';
 
 @ApiTags('Recitations')
@@ -46,8 +49,8 @@ export class RecitationsController {
   constructor(private readonly recitationsService: RecitationsService) {}
 
   @Post('upload')
-  @Auth(RolesEnum.STUDENT)
-  @UseGuards(ActiveSubscriptionGuard)
+  @SetMetadata('roles', [RolesEnum.STUDENT])
+  @UseGuards(JwtAuthGuard, RolesGuard, ActiveSubscriptionGuard)
   @UseInterceptors(FileInterceptor('audio'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
@@ -120,8 +123,8 @@ export class RecitationsController {
   }
 
   @Post('record-direct')
-  @Auth(RolesEnum.STUDENT)
-  @UseGuards(ActiveSubscriptionGuard)
+  @SetMetadata('roles', [RolesEnum.STUDENT])
+  @UseGuards(JwtAuthGuard, RolesGuard, ActiveSubscriptionGuard)
   @UseInterceptors(FileInterceptor('audioBlob'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({

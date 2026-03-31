@@ -20,6 +20,7 @@ import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
 import { AdminActionSubscriptionDto } from './dto/admin-action-subscription.dto';
+import { DevActivateTestSubscriptionDto } from './dto/dev-activate-test-subscription.dto';
 import { Subscription } from './entities/subscription.entity';
 import { Auth } from '../../common/guards/auth.decorator';
 import { RolesEnum } from '../../common/enums/roles.enum';
@@ -48,6 +49,7 @@ export class SubscriptionsController {
         paymentUrl: { type: 'string', example: 'https://payment.gateway.com/checkout/session_123' },
         sessionId: { type: 'string', example: 'session_123_1234567890' },
         amount: { type: 'number', example: 50 },
+        currency: { type: 'string', example: 'EGP' },
       },
     },
   })
@@ -231,6 +233,36 @@ export class SubscriptionsController {
     return await this.subscriptionsService.canRecordRecitation(user.id);
   }
 
+  @Post('dev/activate-test-subscription')
+  @Auth(RolesEnum.STUDENT)
+  @ApiOperation({
+    summary: 'Development only: activate a test subscription for current student',
+    description:
+      'Creates and activates a subscription without payment in non-production environments.',
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Test subscription activated successfully',
+    type: Subscription,
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'This endpoint is not available in production',
+  })
+  @SuccessResponse(
+    'subscriptions.DEV_TEST_SUBSCRIPTION_ACTIVATED',
+    HttpStatus.CREATED,
+  )
+  async activateTestSubscriptionForDev(
+    @CurrentUser() user: User,
+    @Body() dto: DevActivateTestSubscriptionDto,
+  ) {
+    return await this.subscriptionsService.activateTestSubscriptionForDev(
+      user.id,
+      dto?.planId,
+    );
+  }
+
   @Patch('me/cancel')
   @Auth(RolesEnum.STUDENT)
   @ApiOperation({
@@ -291,6 +323,32 @@ export class SubscriptionsController {
   )
   async activate(@Param('id', ParseIntPipe) id: number) {
     return await this.subscriptionsService.activateSubscription(id);
+  }
+
+  @Get('user/:userId')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({
+    summary: 'Get all subscriptions by user ID (Admin only)',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'User subscriptions retrieved successfully',
+    type: [Subscription],
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden - Admin role required',
+  })
+  @SuccessResponse(
+    'subscriptions.SUBSCRIPTIONS_RETRIEVED_SUCCESSFULLY',
+    HttpStatus.OK,
+  )
+  async findAllByUserId(@Param('userId', ParseIntPipe) userId: number) {
+    return await this.subscriptionsService.findAllByUser(userId);
   }
 
   @Get(':id')
