@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EmailVerification } from './entities/email-verification.entity';
-import { MoreThan, Repository } from 'typeorm';
+import { LessThan, MoreThan, Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
 import { ServerEmailService } from 'src/common/email/email.service';
 import { CustomI18nService } from 'src/common/services/custom-i18n.service';
@@ -182,8 +182,11 @@ export class EmailVerificationService {
   }
 
   async cleanupExpiredCodes() {
+    // `LessThan`, not `MoreThan`: delete codes whose expiry is in the past.
+    // The previous comparison deleted every *still valid* code and kept the
+    // expired ones forever.
     const result = await this.emailVerificationRepository.delete({
-      expiresAt: MoreThan(new Date()),
+      expiresAt: LessThan(new Date()),
     });
     return result.affected;
   }

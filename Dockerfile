@@ -59,13 +59,18 @@ COPY --from=dependencies --chown=nodejs:nodejs /usr/src/app/package*.json ./
 COPY --from=build --chown=nodejs:nodejs /usr/src/app/dist ./dist
 
 USER nodejs
-EXPOSE 3000
 
-# Health check (اختياري)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+# The app listens on HTTP_PORT (3777 by default), not 3000.
+EXPOSE 3777
 
-CMD ["npm", "run", "migration:run"]
+# Hits the real /health liveness route on the correct port. start-period gives
+# the migration step time to finish before health is enforced.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://127.0.0.1:' + (process.env.HTTP_PORT || 3777) + '/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-# تشغيل التطبيق
-CMD ["node", "dist/src/main.js"]
+# Run pending migrations, then start. Two separate CMD lines do NOT run in
+# sequence — Docker only honours the last one, so the previous migration CMD
+# was dead and the schema was never migrated on deploy.
+# `&&` means a failed migration aborts the boot instead of starting the app
+# against a schema it does not match.
+CMD ["sh", "-c", "npm run migration:run:prod && node dist/src/main.js"]

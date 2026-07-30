@@ -9,6 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import { timingSafeEqual } from 'crypto';
 import { Recitation, RecitationStatus } from './entities/recitation.entity';
 import { CreateRecitationDto } from './dto/create-recitation.dto';
 import { CreateDirectRecitationDto } from './dto/create-direct-recitation.dto';
@@ -317,6 +318,56 @@ export class RecitationsService {
 
     // Delete from database
     await this.recitationRepository.remove(recitation);
+  }
+
+  /**
+   * A recitation only leaves PENDING/PROCESSING when the AI service calls our
+   * webhook. If the AI service crashes, loses the job, or the callback is
+   * dropped, the recitation is stuck forever and the student sees a permanent
+   * spinner. Sweep anything that has not moved in `olderThanMinutes`.
+   */
+  async failStaleProcessingRecitations(
+    olderThanMinutes = 60,
+  ): Promise<number> {
+    const cutoff = new Date(Date.now() - olderThanMinutes * 60_000);
+
+    // Fetched rather than bulk-updated because each one needs its own owner's
+    // session refunded, and a bulk UPDATE cannot tell us whose they were.
+    const stale = await this.recitationRepository
+      .createQueryBuilder('recitation')
+      .select(['recitation.id', 'recitation.userId'])
+      .where('recitation.status IN (:...statuses)', {
+        statuses: [RecitationStatus.PENDING, RecitationStatus.PROCESSING],
+      })
+      .andWhere('recitation.updatedAt < :cutoff', { cutoff })
+      .getMany();
+
+    if (stale.length === 0) {
+      return 0;
+    }
+
+    let swept = 0;
+    for (const recitation of stale) {
+      try {
+        await this.markFailedAndRefund(
+          recitation.id,
+          recitation.userId,
+          `no AI callback within ${olderThanMinutes}m`,
+        );
+        swept += 1;
+      } catch (error) {
+        // One bad row must not abort the rest of the sweep.
+        this.logger.error(
+          `Failed to sweep recitation ${recitation.id}: ${error.message}`,
+        );
+      }
+    }
+
+    this.logger.warn(
+      `Swept ${swept} stale recitation(s) after ${olderThanMinutes}m with no AI callback`,
+    );
+
+    return swept;
   }
 
   async deleteOldRecitations(): Promise<number> {
@@ -674,17 +725,26 @@ export class RecitationsService {
       });
 
       if (!surah) {
-        this.logger.error(`Surah ${recitation.surahId} not found`);
+        // Without this the recitation is stranded in PENDING with no AI job
+        // ever created, and nothing downstream can tell it apart from one
+        // that is still legitimately queued.
+        await this.markFailedAndRefund(
+          recitation.id,
+          recitation.userId,
+          `surah ${recitation.surahId} not found`,
+        );
         return;
       }
 
-      // Get webhook URL from config
-      const apiUrl = this.configService.get<string>('app.url') || 'http://localhost:3000';
+      // Get webhook URL from config. `app.url` must resolve to an address the
+      // AI service can reach: if it points at localhost the callback never
+      // arrives and the recitation stays PROCESSING forever.
+      const apiUrl = this.configService.getOrThrow<string>('app.url');
       const webhookUrl = `${apiUrl}/api/v1/recitations/webhook/ai-evaluation`;
 
       // Prepare AI request
       const aiRequest = {
-        audioUrl: recitation.audioUrl,
+        audioUrl: this.toAbsoluteAudioUrl(recitation.audioUrl),
         surahNumber: recitation.surahId,
         surahName: surah.name, // Use 'name' which contains Arabic name
         fromAyah: recitation.fromAyah,
@@ -711,13 +771,10 @@ export class RecitationsService {
           `Recitation ${recitation.id} submitted successfully with jobId: ${response.jobId}`,
         );
       } else if (response.status === 'error') {
-        // Mark as failed
-        await this.recitationRepository.update(recitation.id, {
-          status: RecitationStatus.FAILED,
-        });
-
-        this.logger.error(
-          `AI service rejected recitation ${recitation.id}: ${response.message}`,
+        await this.markFailedAndRefund(
+          recitation.id,
+          recitation.userId,
+          `AI service rejected it: ${response.message}`,
         );
       }
     } catch (error) {
@@ -726,11 +783,93 @@ export class RecitationsService {
         error.stack,
       );
 
-      // Mark as failed
-      await this.recitationRepository.update(recitation.id, {
-        status: RecitationStatus.FAILED,
-      });
+      await this.markFailedAndRefund(
+        recitation.id,
+        recitation.userId,
+        `submission threw: ${error.message}`,
+      );
     }
+  }
+
+  /**
+   * Move a recitation to FAILED and hand the student's session back.
+   *
+   * The status update is conditional on the row not already being FAILED, and
+   * the refund only fires when that update actually changed something. That
+   * makes this idempotent: the AI service is told to retry its webhook on 5xx,
+   * and a retry must not refund a second session.
+   */
+  private async markFailedAndRefund(
+    recitationId: number,
+    userId: number,
+    reason: string,
+    evaluationData?: unknown,
+  ): Promise<void> {
+    const result = await this.recitationRepository
+      .createQueryBuilder()
+      .update(Recitation)
+      .set({
+        status: RecitationStatus.FAILED,
+        ...(evaluationData !== undefined
+          ? { evaluationData: evaluationData as any }
+          : {}),
+      })
+      .where('id = :id', { id: recitationId })
+      .andWhere('status != :failed', { failed: RecitationStatus.FAILED })
+      .execute();
+
+    if ((result.affected ?? 0) === 0) {
+      this.logger.log(
+        `Recitation ${recitationId} was already FAILED; skipping duplicate refund`,
+      );
+      return;
+    }
+
+    this.logger.error(`Recitation ${recitationId} FAILED: ${reason}`);
+    await this.subscriptionsService.refundSession(userId);
+  }
+
+  /**
+   * FileUploadService returns a bucket-relative key (e.g. `/recitations/x.mp3`),
+   * which is meaningless to an external caller. Prepend the storage base URL so
+   * the AI service can actually download the file.
+   */
+  private toAbsoluteAudioUrl(audioUrl: string): string {
+    if (!audioUrl || /^https?:\/\//i.test(audioUrl)) {
+      return audioUrl;
+    }
+
+    const baseUrl = (
+      this.configService.get<string>('OvhStorage.baseUrl') ?? ''
+    ).replace(/\/+$/, '');
+
+    if (!baseUrl) {
+      this.logger.warn(
+        'OvhStorage.baseUrl is not configured; sending a relative audioUrl to the AI service',
+      );
+      return audioUrl;
+    }
+
+    return `${baseUrl}${audioUrl.startsWith('/') ? '' : '/'}${audioUrl}`;
+  }
+
+  /**
+   * Constant-time comparison of the webhook bearer token. A plain `!==` leaks
+   * the secret one byte at a time to an attacker who can measure response time.
+   */
+  private isValidWebhookAuth(authHeader?: string): boolean {
+    if (!this.webhookSecret || !authHeader) {
+      return false;
+    }
+
+    const expected = Buffer.from(`Bearer ${this.webhookSecret}`);
+    const received = Buffer.from(authHeader);
+
+    // timingSafeEqual throws on length mismatch, so check length first. Length
+    // is not secret — the token is fixed-width.
+    return (
+      expected.length === received.length && timingSafeEqual(expected, received)
+    );
   }
 
   /**
@@ -742,8 +881,7 @@ export class RecitationsService {
     authHeader: string,
   ): Promise<{ success: boolean; message: string }> {
     // Verify authorization
-    const expectedAuth = `Bearer ${this.webhookSecret}`;
-    if (authHeader !== expectedAuth) {
+    if (!this.isValidWebhookAuth(authHeader)) {
       throw new UnauthorizedException('Invalid webhook secret');
     }
 
@@ -768,9 +906,32 @@ export class RecitationsService {
 
     // Update based on status
     if (webhookData.status === 'success' && webhookData.data) {
-      // Extract score and data
-      const evaluationScore =
-        webhookData.data.overallScore || webhookData.data.overallAccuracy || 0;
+      // Extract score and data. `??` not `||`: a legitimate score of 0 (student
+      // got everything wrong) must not fall through to the next candidate.
+      const rawScore: number =
+        webhookData.data.overallScore ??
+        webhookData.data.overallAccuracy ??
+        webhookData.data.accuracy ??
+        0;
+
+      // The contract is 0-100 and the AI service has confirmed and tested it.
+      // Deliberately NOT rescaling values below 1: a long ayah range can
+      // legitimately score under 1% (one correct word out of 200+), and
+      // multiplying that by 100 would turn a near-total failure into a pass.
+      //
+      // If the AI service ever regresses to sending a 0-1 ratio, this warning
+      // fires on every single record — loud, systemic and obvious — instead of
+      // silently corrupting the occasional genuine low score. Recovery is then
+      // a one-line change plus a backfill, rather than undetectable bad data.
+      const evaluationScore = rawScore;
+
+      if (rawScore > 0 && rawScore < 1) {
+        this.logger.warn(
+          `AI returned score ${rawScore} for recitation ${webhookData.recitationId}. ` +
+            'Storing as-is (0-100 scale assumed). If EVERY score looks like this, ' +
+            'the AI service is sending a 0-1 ratio and must be fixed.',
+        );
+      }
 
       await this.recitationRepository.update(recitation.id, {
         evaluationScore,
@@ -787,17 +948,11 @@ export class RecitationsService {
         message: 'Evaluation received and saved',
       };
     } else if (webhookData.status === 'error') {
-      // Mark as failed with error message
-      await this.recitationRepository.update(recitation.id, {
-        status: RecitationStatus.FAILED,
-        evaluationData: JSON.stringify({
-          error: true,
-          message: webhookData.message,
-        }) as any,
-      });
-
-      this.logger.error(
-        `AI evaluation failed for recitation ${recitation.id}: ${webhookData.message}`,
+      await this.markFailedAndRefund(
+        recitation.id,
+        recitation.userId,
+        `AI evaluation failed: ${webhookData.message}`,
+        { error: true, message: webhookData.message },
       );
 
       return {

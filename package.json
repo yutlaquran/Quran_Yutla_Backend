@@ -16,13 +16,13 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e": "cross-env APP_ENV=development jest --config ./test/jest-e2e.json --runInBand --forceExit",
     "typeorm": "cross-env NODE_ENV=development npm run build && npx typeorm -d dist/src/common/config/datasource-config.js",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
+    "migration:run:prod": "typeorm -d dist/src/common/config/datasource-config.js migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "db:drop": "npm run typeorm schema:drop",
-    "seed:jalsa-templates": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register scripts/seed-jalsa-templates.ts"
+    "db:drop": "npm run typeorm schema:drop"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.787.0",

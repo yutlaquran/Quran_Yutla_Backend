@@ -589,7 +589,7 @@ createdb quran_yutla
 npm run migration:run
 
 # Import Quran data
-psql -U postgres -d quran_yutla -f hafsData_v2-0.sql
+psql -U postgres -d quran_yutla -f hafsData_v2-0-clean.sql
 ```
 
 ### Step 5: Run Application

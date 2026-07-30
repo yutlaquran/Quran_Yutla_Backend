@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  HttpCode,
+  NotFoundException,
   Query,
   Res,
   UnauthorizedException,
@@ -10,17 +12,38 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Response } from 'express';
 import { errorHtml } from './common/errors/error-html';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @Controller()
 @ApiTags('api')
 export class AppController {
   constructor(private readonly appService: AppService) {}
-  private readonly SECRET_KEY = process.env.LOGS_SECRET || 'super-secret';
+
+  // Only enable the log-dump endpoint when a secret is explicitly configured.
+  // No env var => the endpoint is disabled entirely, rather than falling back
+  // to a well-known default that exposes request bodies (including passwords).
+  private readonly logsSecret = process.env.LOGS_SECRET;
 
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  /**
+   * Liveness probe for Docker / Kubernetes. Intentionally does not touch the
+   * database or any external service: it answers "is the process up and able to
+   * serve HTTP", so a transient DB blip must not make the orchestrator kill a
+   * healthy pod. Unversioned and public by design.
+   */
+  @Get('health')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Liveness probe' })
+  health() {
+    return {
+      status: 'ok',
+      uptime: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Get('errors')
@@ -29,7 +52,12 @@ export class AppController {
     @Query('key') key: string,
     @Query('index') index: string,
   ) {
-    if (key !== this.SECRET_KEY) {
+    // Disabled unless LOGS_SECRET is set — behave as if the route does not exist.
+    if (!this.logsSecret) {
+      throw new NotFoundException();
+    }
+
+    if (key !== this.logsSecret) {
       throw new UnauthorizedException('Invalid key');
     }
 

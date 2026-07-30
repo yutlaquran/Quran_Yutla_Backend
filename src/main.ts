@@ -7,7 +7,21 @@ import { setupSwagger } from './common/setup/swagger-setup';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+
+  // Restrict browser origins when CORS_ORIGIN is set (comma-separated list).
+  // Left unset it stays fully open, so this can't break an existing deployment
+  // that relied on the previous open policy — set it in production to lock the
+  // API down to the real web/app origins. Native mobile clients are unaffected
+  // either way (they don't send a browser Origin).
+  const corsOrigin = process.env.CORS_ORIGIN?.trim();
+  app.enableCors(
+    corsOrigin
+      ? {
+          origin: corsOrigin.split(',').map((o) => o.trim()),
+          credentials: true,
+        }
+      : undefined,
+  );
 
   app.enableVersioning({
     type: VersioningType.URI,

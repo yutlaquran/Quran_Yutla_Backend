@@ -3,11 +3,17 @@
 # Production Quran Data Import with Batch Commits
 # This script imports data in batches to show progress
 
-DB_HOST="57.128.59.32"
-DB_PORT="31499"
-DB_USER="quran_yutla_admin"
-DB_NAME="quran_yutla_db"
-DB_PASSWORD="quran_yutla@Halim1379"
+# Credentials come from the environment. Never hardcode them here: this file
+# is tracked in git, so anything written above this line is public forever.
+#
+#   export DB_HOST=... DB_PORT=... DB_USER=... DB_NAME=... DB_PASSWORD=...
+#   ./scripts/import-quran-batch.sh
+#
+: "${DB_HOST:?DB_HOST is required}"
+: "${DB_PORT:?DB_PORT is required}"
+: "${DB_USER:?DB_USER is required}"
+: "${DB_NAME:?DB_NAME is required}"
+: "${DB_PASSWORD:?DB_PASSWORD is required}"
 
 echo "🚀 Starting Quran data import to production database..."
 echo "📊 Database: $DB_NAME @ $DB_HOST:$DB_PORT"

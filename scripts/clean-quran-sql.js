@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 /**
- * Script to clean Quran SQL file by removing end-of-ayah markers
- * These Unicode symbols (ﰀ ﰁ ﰂ etc.) are not part of the Quran text
+ * ⚠️ OBSOLETE — kept only as a record of how the clean file was produced.
+ *
+ * This generated hafsData_v2-0-clean.sql from the raw hafsData_v2-0.sql by
+ * stripping end-of-ayah markers (ﰀ ﰁ ﰂ — U+FC00..U+FDFF), which are typography
+ * rather than Quran text.
+ *
+ * The raw file is no longer kept in the repository: the clean file is now the
+ * canonical source and is committed directly. Running this script will fail on
+ * the missing input, which is expected. Do not "fix" it by pointing it at the
+ * clean file — that would just rewrite the source onto itself.
  */
 
 const fs = require('fs');

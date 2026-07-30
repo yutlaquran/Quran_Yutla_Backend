@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import { Subscription, SubscriptionStatus } from './entities/subscription.entity';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { CancelSubscriptionDto } from './dto/cancel-subscription.dto';
@@ -400,6 +400,39 @@ export class SubscriptionsService {
     await this.subscriptionRepository.save(subscription);
   }
 
+  /**
+   * Give a session back after work that consumed one could not be delivered
+   * (e.g. the AI evaluation failed). Deliberately never throws: every caller
+   * runs in a background path where an exception would either be swallowed or
+   * take down a cron sweep mid-batch.
+   */
+  async refundSession(userId: number): Promise<void> {
+    const subscription = await this.findUserSubscription(userId);
+
+    if (!subscription) {
+      this.logger.warn(
+        `Cannot refund session for user ${userId}: no active subscription (it may have expired since)`,
+      );
+      return;
+    }
+
+    // Never hand back more than the plan allows — protects against a
+    // double-refund inflating the balance beyond what was paid for.
+    if (subscription.remainingSessions >= subscription.totalSessions) {
+      this.logger.warn(
+        `Skipping refund for user ${userId}: already at ${subscription.remainingSessions}/${subscription.totalSessions}`,
+      );
+      return;
+    }
+
+    subscription.remainingSessions += 1;
+    await this.subscriptionRepository.save(subscription);
+
+    this.logger.log(
+      `Refunded 1 session to user ${userId} (now ${subscription.remainingSessions}/${subscription.totalSessions})`,
+    );
+  }
+
   async cancelSubscription(
     userId: number,
     cancelDto: CancelSubscriptionDto,
@@ -452,23 +485,39 @@ export class SubscriptionsService {
 
   async checkAndExpireSubscriptions(): Promise<void> {
     const now = new Date();
-    
+
+    // `LessThan`, not `MoreThan`: we want subscriptions whose end date is in
+    // the past. The previous comparison selected every *valid* subscription,
+    // expiring live ones nightly and renewing auto-renew ones for free.
     const expiredSubscriptions = await this.subscriptionRepository.find({
       where: {
         status: SubscriptionStatus.ACTIVE,
-        endDate: MoreThan(now),
+        endDate: LessThan(now),
       },
     });
 
-    for (const subscription of expiredSubscriptions) {
-      if (subscription.autoRenew) {
-        // TODO: Integrate with payment gateway to charge
-        await this.renewSubscription(subscription.id);
-      } else {
-        subscription.status = SubscriptionStatus.EXPIRED;
-        await this.subscriptionRepository.save(subscription);
-      }
+    if (expiredSubscriptions.length === 0) {
+      return;
     }
+
+    for (const subscription of expiredSubscriptions) {
+      // NOTE: auto-renew is deliberately not honoured here. Renewing without
+      // charging would hand out free months, and recurring billing is not
+      // implemented (Paymob integration is one-time payment only, and
+      // recurring renewal is listed as post-MVP). Expire the subscription and
+      // let the student start a new paid one; `autoRenew` stays recorded so a
+      // future billing job can pick these up.
+      subscription.status = SubscriptionStatus.EXPIRED;
+      await this.subscriptionRepository.save(subscription);
+    }
+
+    const pendingRenewal = expiredSubscriptions.filter((s) => s.autoRenew).length;
+    this.logger.log(
+      `Expired ${expiredSubscriptions.length} subscription(s)` +
+        (pendingRenewal > 0
+          ? `; ${pendingRenewal} had autoRenew set and need re-payment (recurring billing not implemented)`
+          : ''),
+    );
   }
 
   async hasActiveSubscription(userId: number): Promise<boolean> {
@@ -512,11 +561,18 @@ export class SubscriptionsService {
     userId: number,
     planId?: number,
   ): Promise<Subscription> {
-    const appEnv = this.configService.get<string>('APP_ENV') || process.env.APP_ENV;
-    const nodeEnv = this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV;
-    const isProduction = appEnv === 'production' || nodeEnv === 'production';
+    // Fail safe: allow this only when the environment is *explicitly*
+    // development. The previous check blocked it merely when APP_ENV was
+    // 'production', so a deployment that forgot to set APP_ENV at all left this
+    // free-subscription endpoint wide open in production.
+    const appEnv =
+      this.configService.get<string>('APP_ENV') || process.env.APP_ENV;
+    const nodeEnv =
+      this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV;
+    const isExplicitlyDevelopment =
+      appEnv === 'development' || nodeEnv === 'development';
 
-    if (isProduction) {
+    if (!isExplicitlyDevelopment) {
       throw new ForbiddenException(
         this.i18n.t('subscriptions.DEV_ONLY_ENDPOINT'),
       );

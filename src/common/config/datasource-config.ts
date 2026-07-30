@@ -18,7 +18,11 @@ config({
 
 export const dataSourceOptions:DataSourceOptions = {
   type: 'postgres',
-  synchronize: true, // Temporarily set to true to create tables
+  // Never enable this. With synchronize on, TypeORM rewrites the live schema to
+  // match the entities on every boot — silently dropping columns (and their
+  // data) whenever an entity changes. The schema is owned by the migrations in
+  // ./migrations, starting from 1733000000000-BaselineSchema.
+  synchronize: false,
   logging: false,
   migrations: ['dist/migrations/*{.ts,.js}'],
 };

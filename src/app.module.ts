@@ -29,6 +29,8 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { RecitationsModule } from './modules/recitations/recitations.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 
+const isProduction = process.env.APP_ENV === 'production';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -39,13 +41,33 @@ import { TasksModule } from './modules/tasks/tasks.module';
     }),
     I18nModule.forRoot({
       loaderOptions: {
-        path: path.join('dist/i18n/'),
-        watch: true,
+        // In development read the translations straight from source. `nest
+        // build`/`--watch` sets deleteOutDir, so every rebuild wipes dist/i18n
+        // out from under a running process — with watch enabled that surfaces
+        // as an unhandled ENOENT that kills the app. src/i18n is never
+        // deleted, so the dev process is immune to a concurrent rebuild.
+        // In production dist/i18n is the only copy that ships (see the assets
+        // block in nest-cli.json) and nothing rewrites it at runtime.
+        path: isProduction
+          ? path.join(process.cwd(), 'dist/i18n/')
+          : path.join(process.cwd(), 'src/i18n/'),
+        // Only worth watching where the files actually change by hand.
+        watch: !isProduction,
       },
       fallbackLanguage: 'ar',
       resolvers: [AcceptLanguageResolver],
     }),
-    TypeOrmModule.forRoot(dataSourceOptions),
+    // autoLoadEntities registers every entity pulled in through forFeature(),
+    // so the entity *classes* the app actually uses are the ones TypeORM maps.
+    // The static `dist/**/*.entity.js` glob is dropped here because under ts-jest
+    // (e2e) the app runs from src while that glob loads a *different* compiled
+    // class, giving "No metadata for <Entity>". Migrations use the separate CLI
+    // datasource in datasource-config.ts, which keeps its own entities glob.
+    TypeOrmModule.forRoot({
+      ...dataSourceOptions,
+      entities: undefined,
+      autoLoadEntities: true,
+    }),
     CustomI18nModule,
     ThrottlerModule.forRoot({
       throttlers: [

@@ -5,14 +5,12 @@ import {
   Param,
   ParseIntPipe,
   Query,
-  UseGuards,
   HttpStatus,
   Post,
   Body,
   Patch,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../common/guards/auth.guard';
 import { CurrentUser } from '../../common/guards/user.decorator';
 import { Serialize } from '../../common/interceptors/serialize.interceptor';
 import { SuccessResponse } from '../../common/interceptors/success-response.interceptor';
@@ -34,6 +32,9 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'List all users (Admin only)' })
+  @ApiResponse({ status: 403, description: 'Admin role required' })
   @SuccessResponse('User list retrieved successfully', 200)
   @Serialize(PaginatedUserResponseDto)
   findAll(@Query() query: UserQueryDto) {
@@ -151,15 +152,19 @@ export class UserController {
   }
 
   @Get(':id')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Get any user by id (Admin only)' })
+  @ApiResponse({ status: 403, description: 'Admin role required' })
   @SuccessResponse('User retrieved successfully', 200)
-  @UseGuards(JwtAuthGuard)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.userService.findOne(id);
   }
 
   @Delete(':id')
+  @Auth(RolesEnum.ADMIN)
+  @ApiOperation({ summary: 'Soft-delete any user by id (Admin only)' })
+  @ApiResponse({ status: 403, description: 'Admin role required' })
   @SuccessResponse('User deleted successfully', 200)
-  @UseGuards(JwtAuthGuard)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.userService.remove(id);
   }

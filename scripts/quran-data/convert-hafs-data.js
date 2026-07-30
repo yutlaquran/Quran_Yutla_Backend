@@ -2,13 +2,19 @@
 
 /**
  * Hafs Data Converter
- * Converts the original hafsData_v2-0.sql to match our new schema
+ * Converts hafsData_v2-0-clean.sql to match our new schema.
+ *
+ * The clean file is the canonical source: end-of-ayah presentation glyphs
+ * (U+FC00-U+FDFF) are stripped, since they are typography rather than text.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const inputFile = path.join(__dirname, '..', 'hafsData_v2-0.sql');
+// Two levels up: this script lives in scripts/quran-data/, the SQL is at the
+// repository root. (The previous path resolved to scripts/, which never held
+// the file — the script could not have run as written.)
+const inputFile = path.join(__dirname, '..', '..', 'hafsData_v2-0-clean.sql');
 const outputFile = path.join(__dirname, 'converted-hafs-data.sql');
 
 console.log('Converting Hafs data to new schema...');

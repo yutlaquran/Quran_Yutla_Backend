@@ -3,11 +3,28 @@
 # Production Quran Data Import with Progress Tracking
 # This script imports data in small batches with individual commits
 
-DB_HOST="57.128.59.32"
-DB_PORT="31499"
-DB_USER="quran_yutla_admin"
-DB_NAME="quran_yutla_db"
-DB_PASSWORD="quran_yutla@Halim1379"
+# Credentials come from the environment. Never hardcode them here: this file
+# is tracked in git, so anything written above this line is public forever.
+#
+#   export DB_HOST=... DB_PORT=... DB_USER=... DB_NAME=... DB_PASSWORD=...
+#   ./scripts/import-quran-production.sh
+#
+: "${DB_HOST:?DB_HOST is required}"
+: "${DB_PORT:?DB_PORT is required}"
+: "${DB_USER:?DB_USER is required}"
+: "${DB_NAME:?DB_NAME is required}"
+: "${DB_PASSWORD:?DB_PASSWORD is required}"
+
+# Canonical Quran source. hafsData_v2-0-clean.sql is the authoritative copy:
+# the end-of-ayah presentation glyphs (U+FC00-U+FDFF) have been stripped, as
+# they are typography and not part of the text. The unstripped original is no
+# longer kept in the repo. Override only if you know why.
+SOURCE_SQL="${SOURCE_SQL:-$(dirname "$0")/../hafsData_v2-0-clean.sql}"
+
+if [ ! -f "$SOURCE_SQL" ]; then
+  echo "❌ Source SQL not found: $SOURCE_SQL"
+  exit 1
+fi
 
 echo "🚀 Starting Quran data import to production database..."
 echo "📊 Database: $DB_NAME @ $DB_HOST:$DB_PORT"
@@ -37,7 +54,7 @@ CREATE TEMP TABLE IF NOT EXISTS temp_hafs_data (
 "
 
 # Count total lines in the source file to show progress
-TOTAL_LINES=$(grep -c "INSERT INTO" ../hafsData_v2-0.sql)
+TOTAL_LINES=$(grep -c "INSERT INTO" "$SOURCE_SQL")
 echo "📄 Total ayahs to import: $TOTAL_LINES"
 echo ""
 
@@ -88,7 +105,7 @@ while IFS= read -r line; do
             fi
         fi
     fi
-done < "../hafsData_v2-0.sql"
+done < "$SOURCE_SQL"
 
 # Process any remaining records in the final batch
 if [ -n "$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM temp_hafs_data;" | xargs)" ] && [ "$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM temp_hafs_data;" | xargs)" -gt 0 ]; then
