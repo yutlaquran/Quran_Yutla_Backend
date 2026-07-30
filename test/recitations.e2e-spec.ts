@@ -276,7 +276,10 @@ describe('Recitations & Auth (e2e)', () => {
         .expect(404));
     maybe('valid secret, matching job -> stores 0-100 score', async () => {
       const jobId = `e2e-job-${SFX}`;
-      await ds.query(`UPDATE recitations SET ai_job_id = $1 WHERE id = $2`, [jobId, recitationId]);
+      // Establish a known PENDING state + jobId. record-direct fires an async
+      // submitToAI that fails in the test env (no AI service) and would mark the
+      // row FAILED; the webhook only completes a still-pending recitation.
+      await ds.query(`UPDATE recitations SET ai_job_id = $1, status = 'pending' WHERE id = $2`, [jobId, recitationId]);
       const res = await http()
         .post(`${API}/recitations/webhook/ai-evaluation`)
         .set('Authorization', `Bearer ${WEBHOOK_SECRET}`)

@@ -5,5 +5,6 @@
   "PLAN_RETRIEVED_SUCCESSFULLY": "تم جلب الباقة بنجاح",
   "PLANS_RETRIEVED_SUCCESSFULLY": "تم جلب الباقات بنجاح",
   "PLAN_NOT_FOUND": "الباقة غير موجودة",
-  "PLAN_STATUS_TOGGLED_SUCCESSFULLY": "تم تغيير حالة الباقة بنجاح"
+  "PLAN_STATUS_TOGGLED_SUCCESSFULLY": "تم تغيير حالة الباقة بنجاح",
+  "PLAN_IN_USE": "لا يمكن حذف باقة مرتبطة باشتراكات قائمة"
 }

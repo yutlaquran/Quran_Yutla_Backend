@@ -187,12 +187,14 @@ export class AuthService {
   }
 
   async refreshTokens(refreshToken: string): Promise<Tokens> {
-    // A malformed/expired token makes jwtService.verify throw. Catch it and
-    // answer 401 (re-login) instead of letting it surface as a 500.
+    // Resolve the secret outside the try so a genuine config error surfaces as
+    // itself, not as a 401. A malformed/expired token makes jwtService.verify
+    // throw — catch only that and answer 401 (re-login) instead of a 500.
+    const refreshSecret = this.configService.getOrThrow<string>(
+      'JWT.refreshTokenSecret',
+    );
     try {
-      this.jwtService.verify(refreshToken, {
-        secret: this.configService.getOrThrow<string>('JWT.refreshTokenSecret'),
-      });
+      this.jwtService.verify(refreshToken, { secret: refreshSecret });
     } catch {
       throw new UnauthorizedException(
         this.i18n.t('auth.REFRESH_TOKEN_NOT_FOUND'),

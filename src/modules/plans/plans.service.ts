@@ -195,9 +195,7 @@ export class PlansService implements OnModuleInit {
         (e as { code?: string }).code ??
         (e as { driverError?: { code?: string } }).driverError?.code;
       if (e instanceof QueryFailedError && code === '23503') {
-        throw new ConflictException(
-          'Cannot delete a plan that is referenced by existing subscriptions',
-        );
+        throw new ConflictException(this.i18n.t('plans.PLAN_IN_USE'));
       }
       throw e;
     }

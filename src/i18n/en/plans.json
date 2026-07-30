@@ -5,5 +5,6 @@
   "PLAN_RETRIEVED_SUCCESSFULLY": "Plan retrieved successfully",
   "PLANS_RETRIEVED_SUCCESSFULLY": "Plans retrieved successfully",
   "PLAN_NOT_FOUND": "Plan not found",
-  "PLAN_STATUS_TOGGLED_SUCCESSFULLY": "Plan status toggled successfully"
+  "PLAN_STATUS_TOGGLED_SUCCESSFULLY": "Plan status toggled successfully",
+  "PLAN_IN_USE": "Cannot delete a plan that is referenced by existing subscriptions"
 }

@@ -933,15 +933,34 @@ export class RecitationsService {
         );
       }
 
-      await this.recitationRepository.update(recitation.id, {
-        evaluationScore,
-        evaluationData: webhookData.data,
-        status: RecitationStatus.COMPLETED,
-      });
+      // Only complete a recitation that is still awaiting a result. If the
+      // stale-sweep already FAILED-and-refunded it (a callback later than the
+      // timeout) or a previous webhook already COMPLETED it, do not re-open it:
+      // that would deliver the evaluation on top of an already-refunded
+      // session, i.e. a free evaluation.
+      const result = await this.recitationRepository
+        .createQueryBuilder()
+        .update(Recitation)
+        .set({
+          evaluationScore,
+          evaluationData: webhookData.data as any,
+          status: RecitationStatus.COMPLETED,
+        })
+        .where('id = :id', { id: recitation.id })
+        .andWhere('status IN (:...open)', {
+          open: [RecitationStatus.PENDING, RecitationStatus.PROCESSING],
+        })
+        .execute();
 
-      this.logger.log(
-        `Successfully saved AI evaluation for recitation ${recitation.id} with score ${evaluationScore}`,
-      );
+      if ((result.affected ?? 0) === 0) {
+        this.logger.warn(
+          `Recitation ${recitation.id} was already finalized; ignoring late/duplicate success webhook`,
+        );
+      } else {
+        this.logger.log(
+          `Successfully saved AI evaluation for recitation ${recitation.id} with score ${evaluationScore}`,
+        );
+      }
 
       return {
         success: true,
