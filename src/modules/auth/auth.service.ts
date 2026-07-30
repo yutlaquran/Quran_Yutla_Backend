@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -186,9 +187,17 @@ export class AuthService {
   }
 
   async refreshTokens(refreshToken: string): Promise<Tokens> {
-    const payload = this.jwtService.verify(refreshToken, {
-      secret: this.configService.getOrThrow<string>('JWT.refreshTokenSecret'),
-    });
+    // A malformed/expired token makes jwtService.verify throw. Catch it and
+    // answer 401 (re-login) instead of letting it surface as a 500.
+    try {
+      this.jwtService.verify(refreshToken, {
+        secret: this.configService.getOrThrow<string>('JWT.refreshTokenSecret'),
+      });
+    } catch {
+      throw new UnauthorizedException(
+        this.i18n.t('auth.REFRESH_TOKEN_NOT_FOUND'),
+      );
+    }
 
     const token = await this.tokenRepository.findOne({
       where: { token: refreshToken },

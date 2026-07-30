@@ -2,12 +2,13 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   Logger,
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { Plan, SessionCount, SessionDuration } from './entities/plan.entity';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
@@ -185,7 +186,21 @@ export class PlansService implements OnModuleInit {
 
   async remove(id: number): Promise<void> {
     const plan = await this.findOne(id);
-    await this.planRepository.remove(plan);
+    try {
+      await this.planRepository.remove(plan);
+    } catch (e) {
+      // 23503 = FK violation: a subscription still references this plan.
+      // Answer 409 with a clear message instead of leaking a raw 500.
+      const code =
+        (e as { code?: string }).code ??
+        (e as { driverError?: { code?: string } }).driverError?.code;
+      if (e instanceof QueryFailedError && code === '23503') {
+        throw new ConflictException(
+          'Cannot delete a plan that is referenced by existing subscriptions',
+        );
+      }
+      throw e;
+    }
   }
 
   async toggleActive(id: number): Promise<Plan> {
