@@ -14,6 +14,7 @@ import OvhStorageConfig from './common/config/cloud-storage.config';
 import paymobConfig from './common/config/paymob.config';
 import { dataSourceOptions } from './common/config/datasource-config';
 import { CustomI18nModule } from './common/services/custom-i18n.module';
+import { ReviewAccountsSeeder } from './common/seeders/review-accounts.seeder';
 import { LoggerMiddleware } from './logger.middleware';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmailVerificationModule } from './modules/email-verification/email-verification.module';
@@ -94,6 +95,8 @@ const isProduction = process.env.APP_ENV === 'production';
   controllers: [AppController],
   providers: [
     AppService,
+    // Runs only when SEED_REVIEW_ACCOUNTS=true — seeds the review/demo accounts.
+    ReviewAccountsSeeder,
 
     {
       provide: APP_GUARD,
