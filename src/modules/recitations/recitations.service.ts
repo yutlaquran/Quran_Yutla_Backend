@@ -4,10 +4,11 @@ import {
   BadRequestException,
   ForbiddenException,
   UnauthorizedException,
+  ServiceUnavailableException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, IsNull } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { timingSafeEqual } from 'crypto';
 import { Recitation, RecitationStatus } from './entities/recitation.entity';
@@ -43,6 +44,27 @@ export class RecitationsService {
     private readonly i18n: CustomI18nService,
   ) {
     this.webhookSecret = this.configService.get<string>('ai.webhookSecret') || '';
+
+    // An empty secret is a silent kill switch: `isValidWebhookAuth` rejects
+    // every callback, the AI service does NOT retry a 4xx, and every evaluation
+    // is lost while recitations sit in PROCESSING until the stale-sweep refunds
+    // them. Nothing in the request path would look broken. Fail at boot instead.
+    const appEnv =
+      this.configService.get<string>('APP_ENV') || process.env.APP_ENV;
+    const isProduction =
+      appEnv === 'production' || process.env.NODE_ENV === 'production';
+
+    if (!this.webhookSecret) {
+      const message =
+        'AI_WEBHOOK_SECRET is not set. AI evaluation callbacks will be rejected ' +
+        'with 401 and every result will be discarded (the AI service does not ' +
+        'retry 4xx).';
+
+      if (isProduction) {
+        throw new Error(message);
+      }
+      this.logger.warn(`${message} Allowed outside production only.`);
+    }
   }
 
   async create(
@@ -854,6 +876,34 @@ export class RecitationsService {
   }
 
   /**
+   * Drop the AI service's word tallies before storing the evaluation.
+   *
+   * `overallScore` is derived from the grader's accuracy, which ignores extra
+   * words the student inserted, while `totalWords`/`correctWords`/
+   * `incorrectWords` are counted from a `words` array that includes those
+   * insertions as rows. A verified run returned `overallScore: 100` alongside
+   * `correctWords: 2, totalWords: 3` — correct by each definition, nonsense
+   * side by side, and a parent reading "2/3 — 100%" concludes the app is
+   * broken. The per-word `words` array is kept: it carries the detail without
+   * the contradictory headline. Restore these once the AI service reconciles
+   * the two numbers.
+   */
+  private stripWordCounters(data: unknown): any {
+    if (!data || typeof data !== 'object') {
+      return data;
+    }
+
+    const {
+      totalWords: _totalWords,
+      correctWords: _correctWords,
+      incorrectWords: _incorrectWords,
+      ...rest
+    } = data as Record<string, unknown>;
+
+    return rest;
+  }
+
+  /**
    * Constant-time comparison of the webhook bearer token. A plain `!==` leaks
    * the secret one byte at a time to an attacker who can measure response time.
    */
@@ -889,19 +939,54 @@ export class RecitationsService {
       `Received AI webhook for recitation ${webhookData.recitationId} with jobId ${webhookData.jobId}`,
     );
 
-    // Find recitation by ID and jobId
+    // Look the recitation up by id alone, then reconcile the jobId separately.
+    // Matching on both columns at once cannot distinguish "this webhook is
+    // bogus" from "we have not written aiJobId yet", and those need opposite
+    // responses. The callback is already authenticated by the shared secret, so
+    // the jobId is a consistency check rather than the security boundary.
     const recitation = await this.recitationRepository.findOne({
-      where: {
-        id: webhookData.recitationId,
-        aiJobId: webhookData.jobId,
-      },
+      where: { id: webhookData.recitationId },
     });
 
     if (!recitation) {
+      // Answer 503, not 404: the AI service retries 5xx three times but drops a
+      // 4xx permanently. If the row is merely not visible yet, a retry saves the
+      // evaluation; if the id is genuinely bogus, three ignored retries cost
+      // nothing.
       this.logger.error(
-        `Recitation not found or jobId mismatch: recitationId=${webhookData.recitationId}, jobId=${webhookData.jobId}`,
+        `Recitation not found: recitationId=${webhookData.recitationId}, jobId=${webhookData.jobId}. ` +
+          'Returning 503 so the AI service retries.',
       );
-      throw new NotFoundException('Recitation not found or invalid jobId');
+      throw new ServiceUnavailableException(
+        'Recitation not available yet, please retry',
+      );
+    }
+
+    if (!recitation.aiJobId) {
+      // The result beat our own write of aiJobId (measured: callbacks arrive in
+      // ~9s, and the column is only set after submitForEvaluation returns).
+      // Adopt the jobId instead of rejecting a legitimate result.
+      this.logger.warn(
+        `Recitation ${recitation.id} had no aiJobId when its webhook arrived; ` +
+          `adopting jobId ${webhookData.jobId}`,
+      );
+      await this.recitationRepository.update(
+        { id: recitation.id, aiJobId: IsNull() },
+        { aiJobId: webhookData.jobId },
+      );
+      recitation.aiJobId = webhookData.jobId;
+    } else if (recitation.aiJobId !== webhookData.jobId) {
+      // A different job owns this recitation now (e.g. it was resubmitted).
+      // Accept the request so the sender stops retrying, but do not let a stale
+      // result overwrite the current one.
+      this.logger.warn(
+        `Ignoring webhook for recitation ${recitation.id}: jobId ${webhookData.jobId} ` +
+          `does not match the active job ${recitation.aiJobId}`,
+      );
+      return {
+        success: true,
+        message: 'Stale jobId, ignored',
+      };
     }
 
     // Update based on status
@@ -943,7 +1028,7 @@ export class RecitationsService {
         .update(Recitation)
         .set({
           evaluationScore,
-          evaluationData: webhookData.data as any,
+          evaluationData: this.stripWordCounters(webhookData.data),
           status: RecitationStatus.COMPLETED,
         })
         .where('id = :id', { id: recitation.id })

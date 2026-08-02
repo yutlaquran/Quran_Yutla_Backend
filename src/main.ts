@@ -58,4 +58,8 @@ bootstrap()
   })
   .catch((error) => {
     void Logger.error('Bootstrap failed', error);
+    // Exit non-zero so the orchestrator sees a failed start. Without this the
+    // process just falls off the end of the event loop and exits 0, which reads
+    // as a clean shutdown — a misconfigured deployment would look healthy.
+    process.exit(1);
   });
