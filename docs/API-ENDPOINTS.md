@@ -2,7 +2,7 @@
 
 ## Base URL
 - **Development**: `http://localhost:3001`
-- **Production**: `https://api.yutlaquran.com`
+- **Production**: `https://api.quranyutla.com`
 - **Swagger Documentation**: `/api/docs`
 
 ---

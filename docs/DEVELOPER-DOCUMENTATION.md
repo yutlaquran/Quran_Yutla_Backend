@@ -233,7 +233,7 @@ src/
 
 ### Base URL:
 - Development: `http://localhost:3001`
-- Production: `https://api.yutlaquran.com`
+- Production: `https://api.quranyutla.com`
 - Swagger Docs: `/api/docs`
 
 ### Authentication (`/auth`)
@@ -436,7 +436,7 @@ src/
      "surahId": 1,
      "fromAyah": 1,
      "toAyah": 7,
-     "callbackUrl": "https://api.yutlaquran.com/recitations/ai-webhook"
+     "callbackUrl": "https://api.quranyutla.com/recitations/ai-webhook"
    }
    ```
 3. **AI processes** (async) → Status: PROCESSING
@@ -656,7 +656,7 @@ pm2 save
 ```nginx
 server {
     listen 80;
-    server_name api.yutlaquran.com;
+    server_name api.quranyutla.com;
     
     location / {
         proxy_pass http://localhost:3001;
@@ -672,7 +672,7 @@ server {
 ### SSL with Let's Encrypt:
 ```bash
 sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d api.yutlaquran.com
+sudo certbot --nginx -d api.quranyutla.com
 ```
 
 ---
@@ -688,7 +688,7 @@ sudo certbot --nginx -d api.yutlaquran.com
 NODE_ENV=production
 PORT=3001
 API_VERSION=1
-FRONTEND_URL=https://yutlaquran.com
+FRONTEND_URL=https://quranyutla.com
 
 # ======================
 # Database
@@ -732,7 +732,7 @@ PAYMOB_API_KEY=your_paymob_api_key
 PAYMOB_SECRET_KEY=your_paymob_secret_key
 PAYMOB_PUBLIC_KEY=your_paymob_public_key
 PAYMOB_IFRAME_ID=your_iframe_id
-PAYMOB_CALLBACK_URL=https://api.yutlaquran.com/subscriptions/paymob-callback
+PAYMOB_CALLBACK_URL=https://api.quranyutla.com/subscriptions/paymob-callback
 
 # ======================
 # Email Service
@@ -740,9 +740,9 @@ PAYMOB_CALLBACK_URL=https://api.yutlaquran.com/subscriptions/paymob-callback
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_SECURE=false
-EMAIL_USER=noreply@yutlaquran.com
+EMAIL_USER=noreply@quranyutla.com
 EMAIL_PASSWORD=your_email_app_password
-EMAIL_FROM=Quran Yutla <noreply@yutlaquran.com>
+EMAIL_FROM=Quran Yutla <noreply@quranyutla.com>
 
 # ======================
 # Rate Limiting
@@ -753,7 +753,7 @@ THROTTLE_LIMIT=100
 # ======================
 # CORS
 # ======================
-CORS_ORIGIN=https://yutlaquran.com,https://app.yutlaquran.com
+CORS_ORIGIN=https://quranyutla.com,https://app.quranyutla.com
 
 # ======================
 # Logging

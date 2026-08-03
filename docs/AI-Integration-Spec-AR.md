@@ -61,7 +61,7 @@ Authorization: Bearer {AI_API_KEY}
   "toAyah": 7,
   "userId": 42,
   "recitationId": 1337,
-  "webhookUrl": "https://api.yutlaquran.com/api/v1/recitations/webhook/ai-evaluation",
+  "webhookUrl": "https://api.quranyutla.com/api/v1/recitations/webhook/ai-evaluation",
   "webhookSecret": "<سلسلة سرية هنبعتهالك بشكل منفصل وآمن>"
 }
 ```
@@ -247,7 +247,7 @@ Authorization: Bearer {webhookSecret}
     "suggestions": [
       "ركّز على نطق حرف الهاء في نهاية كلمة 'الله'"
     ],
-    "feedbackAudio": "https://ai.yutlaquran.com/audio/feedback_8f14e45f.mp3",
+    "feedbackAudio": "https://ai.quranyutla.com/audio/feedback_8f14e45f.mp3",
     "referenceAudio": "https://everyayah.com/data/Minshawy_Mujawwad_192kbps/001001.mp3",
     "segmentsProcessed": 2,
     "modelVersion": "v5-30k"
@@ -563,7 +563,7 @@ async def _send_webhook(url: str, secret: str, payload: dict, attempts: int = 3)
 
 ```bash
 AI_API_KEY=<اللي هنتفق عليه>
-PUBLIC_BASE_URL=https://ai.yutlaquran.com
+PUBLIC_BASE_URL=https://ai.quranyutla.com
 ```
 
 ---
