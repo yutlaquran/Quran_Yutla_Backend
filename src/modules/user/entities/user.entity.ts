@@ -10,6 +10,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { resolveStoragePublicUrl } from '../../../common/config/cloud-storage.config';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Token } from '../../../common/entities/token.entity';
 import { RolesEnum } from '../../../common/enums/roles.enum';
@@ -93,8 +94,9 @@ export class User extends BaseEntity {
     transformer: {
       to: (value: string) => value,
       from: (value: string) => {
-        const baseUrl = process.env.OVH_BASE_URL || 'https://yourbaseurl.com';
         if (!value) return value;
+        const baseUrl = resolveStoragePublicUrl();
+        if (!baseUrl) return value;
         if (value.startsWith('http://') || value.startsWith('https://')) {
           return value.replace(/^(http:\/\/|https:\/\/)[^\/]+/, baseUrl);
         }

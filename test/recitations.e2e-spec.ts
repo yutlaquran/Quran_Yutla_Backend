@@ -14,13 +14,19 @@ const SFX = Date.now().toString().slice(-7);
 const email = (role: string) => `e2e-${role}-${SFX}@test.local`;
 
 // Never touch OVH S3 in tests: replace the storage layer with an in-memory stub.
+const SIGNED_AUDIO_URL = 'https://storage.test.local/recitations/e2e-mock.webm?X-Amz-Signature=test';
 const storageMock = {
-  processAndSaveFile: jest
-    .fn()
-    .mockResolvedValue({ url: '/recitations/e2e-mock.webm', filename: 'e2e-mock.webm', size: 1024 }),
+  processAndSaveFile: jest.fn().mockResolvedValue({
+    url: '/recitations/e2e-mock.webm',
+    key: 'recitations/e2e-mock.webm',
+    filename: 'e2e-mock.webm',
+    size: 1024,
+  }),
   processAndSaveFiles: jest.fn().mockResolvedValue([]),
   processCsvFile: jest.fn(),
   deleteFile: jest.fn().mockResolvedValue(undefined),
+  // Recitation audio is private now; every read path signs it before returning.
+  getPresignedUrl: jest.fn().mockResolvedValue(SIGNED_AUDIO_URL),
 };
 
 // Never send real emails during tests. Signup would otherwise fire a real
@@ -215,6 +221,20 @@ describe('Recitations & Auth (e2e)', () => {
       expect(res.body.data.surahId).toBe(1);
       recitationId = res.body.data.id;
     });
+    it('uploads the audio privately and never returns the raw bucket path', async () => {
+      expect(storageMock.processAndSaveFile).toHaveBeenCalledWith(
+        expect.anything(),
+        'recitations',
+        'private',
+      );
+      const res = await http()
+        .get(`${API}/recitations/${recitationId}`)
+        .set('Authorization', `Bearer ${users.student.token}`)
+        .expect(200);
+      // A child's recording must only ever leave here as a signed URL.
+      expect(res.body.data.audioUrl).toBe(SIGNED_AUDIO_URL);
+      expect(res.body.data.audioUrl).not.toBe('/recitations/e2e-mock.webm');
+    });
     it('missing audioBlob -> 400', () =>
       http()
         .post(`${API}/recitations/record-direct`)
@@ -268,12 +288,15 @@ describe('Recitations & Auth (e2e)', () => {
         .expect(401));
 
     const maybe = WEBHOOK_SECRET ? it : it.skip;
-    maybe('valid secret, unknown recitation -> 404', () =>
+    // 503, not 404, and deliberately so (see handleAIWebhook): the AI service
+    // retries 5xx but drops 4xx permanently, so a row that is merely not
+    // visible yet must not get an answer that discards the evaluation.
+    maybe('valid secret, unknown recitation -> 503 (retryable)', () =>
       http()
         .post(`${API}/recitations/webhook/ai-evaluation`)
         .set('Authorization', `Bearer ${WEBHOOK_SECRET}`)
         .send({ jobId: 'no-such-job', recitationId: 999999, userId: 1, status: 'success', data: {} })
-        .expect(404));
+        .expect(503));
     maybe('valid secret, matching job -> stores 0-100 score', async () => {
       const jobId = `e2e-job-${SFX}`;
       // Establish a known PENDING state + jobId. record-direct fires an async

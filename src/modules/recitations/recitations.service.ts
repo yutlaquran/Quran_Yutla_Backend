@@ -28,6 +28,8 @@ import { Surah } from '../quran/entities/surah.entity';
 export class RecitationsService {
   private readonly logger = new Logger(RecitationsService.name);
   private readonly MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+  /** 6h: the AI job may queue behind a cold GPU start before it downloads. */
+  private readonly AI_AUDIO_URL_TTL_SECONDS = 6 * 60 * 60;
   private readonly webhookSecret: string;
 
   constructor(
@@ -107,10 +109,12 @@ export class RecitationsService {
       );
     }
 
-    // Upload to S3
+    // Private: this is an identifiable user's voice, so it is only ever handed
+    // out through a short-lived signed URL, never a permanent public link.
     const uploadResult = await this.fileUploadService.processAndSaveFile(
       file,
       'recitations',
+      'private',
     );
 
     // Get audio duration (approximate from file size)
@@ -123,7 +127,7 @@ export class RecitationsService {
       fromAyah: createRecitationDto.fromAyah,
       toAyah: createRecitationDto.toAyah,
       audioUrl: uploadResult.url,
-      audioKey: uploadResult.filename,
+      audioKey: uploadResult.key,
       duration: approximateDuration,
       fileSize: uploadResult.size,
       notes: createRecitationDto.notes,
@@ -143,7 +147,7 @@ export class RecitationsService {
       );
     });
 
-    return savedRecitation;
+    return await this.signAudioUrl(savedRecitation);
   }
 
   async createDirectRecording(
@@ -206,10 +210,11 @@ export class RecitationsService {
     const baseName = originalName.replace(/\.[^/.]+$/, '');
     audioBlob.originalname = `${baseName}.${fileExtension}`;
 
-    // Upload to S3
+    // Private — see the note in create().
     const uploadResult = await this.fileUploadService.processAndSaveFile(
       audioBlob,
       'recitations',
+      'private',
     );
 
     // Get audio duration (approximate from file size)
@@ -222,7 +227,7 @@ export class RecitationsService {
       fromAyah: createDirectRecitationDto.fromAyah,
       toAyah: createDirectRecitationDto.toAyah,
       audioUrl: uploadResult.url,
-      audioKey: uploadResult.filename,
+      audioKey: uploadResult.key,
       duration: approximateDuration,
       fileSize: uploadResult.size,
       notes: createDirectRecitationDto.notes,
@@ -242,7 +247,7 @@ export class RecitationsService {
       );
     });
 
-    return savedRecitation;
+    return await this.signAudioUrl(savedRecitation);
   }
 
   /**
@@ -296,7 +301,7 @@ export class RecitationsService {
       .getManyAndCount();
 
     return {
-      data,
+      data: await this.signAudioUrls(data),
       total,
       page,
       limit,
@@ -314,7 +319,7 @@ export class RecitationsService {
       );
     }
 
-    return recitation;
+    return await this.signAudioUrl(recitation);
   }
 
   async findOneAdmin(id: number): Promise<Recitation> {
@@ -329,14 +334,23 @@ export class RecitationsService {
       );
     }
 
-    return recitation;
+    return await this.signAudioUrl(recitation);
   }
 
   async remove(id: number, userId: number): Promise<void> {
-    const recitation = await this.findOne(id, userId);
+    const recitation = await this.recitationRepository.findOne({
+      where: { id, userId },
+    });
 
-    // Delete from S3
-    await this.fileUploadService.deleteFile(recitation.audioKey);
+    if (!recitation) {
+      throw new NotFoundException(
+        this.i18n.t('recitations.RECITATION_NOT_FOUND'),
+      );
+    }
+
+    // Resolve the real key: findOne would have replaced audioUrl with a signed
+    // URL, and audio_key alone is wrong on pre-existing rows.
+    await this.fileUploadService.deleteFile(this.resolveAudioKey(recitation));
 
     // Delete from database
     await this.recitationRepository.remove(recitation);
@@ -407,7 +421,9 @@ export class RecitationsService {
     for (const recitation of oldRecitations) {
       try {
         // Delete from S3
-        await this.fileUploadService.deleteFile(recitation.audioKey);
+        await this.fileUploadService.deleteFile(
+          this.resolveAudioKey(recitation),
+        );
         
         // Delete from database
         await this.recitationRepository.remove(recitation);
@@ -444,7 +460,10 @@ export class RecitationsService {
     recitation.evaluationData = evaluationData;
     recitation.status = RecitationStatus.COMPLETED;
 
-    return await this.recitationRepository.save(recitation);
+    await this.recitationRepository.save(recitation);
+
+    // Sign only after the row is persisted.
+    return await this.signAudioUrl(recitation);
   }
 
   async getStatistics(userId: number): Promise<{
@@ -764,9 +783,23 @@ export class RecitationsService {
       const apiUrl = this.configService.getOrThrow<string>('app.url');
       const webhookUrl = `${apiUrl}/api/v1/recitations/webhook/ai-evaluation`;
 
+      // The object is private, so the AI service gets a signed URL rather than
+      // a permanent link. Given a longer life than the player URLs: the job can
+      // sit queued behind a cold GPU start before the download is attempted.
+      const audioUrl = await this.fileUploadService.getPresignedUrl(
+        this.resolveAudioKey(recitation),
+        this.AI_AUDIO_URL_TTL_SECONDS,
+      );
+
+      if (!audioUrl) {
+        throw new Error(
+          `Could not sign the audio URL for recitation ${recitation.id}`,
+        );
+      }
+
       // Prepare AI request
       const aiRequest = {
-        audioUrl: this.toAbsoluteAudioUrl(recitation.audioUrl),
+        audioUrl,
         surahNumber: recitation.surahId,
         surahName: surah.name, // Use 'name' which contains Arabic name
         fromAyah: recitation.fromAyah,
@@ -852,27 +885,49 @@ export class RecitationsService {
   }
 
   /**
-   * FileUploadService returns a bucket-relative key (e.g. `/recitations/x.mp3`),
-   * which is meaningless to an external caller. Prepend the storage base URL so
-   * the AI service can actually download the file.
+   * Recitation audio is stored privately, so the bucket path kept in the row is
+   * not fetchable on its own. Every read path runs the row through here and
+   * swaps `audioUrl` for a signed URL that expires within the hour.
    */
-  private toAbsoluteAudioUrl(audioUrl: string): string {
-    if (!audioUrl || /^https?:\/\//i.test(audioUrl)) {
-      return audioUrl;
+  private async signAudioUrl<T extends Recitation | null>(
+    recitation: T,
+  ): Promise<T> {
+    if (!recitation) return recitation;
+
+    const key = this.resolveAudioKey(recitation);
+    if (key) {
+      recitation.audioUrl = await this.fileUploadService.getPresignedUrl(key);
     }
 
-    const baseUrl = (
-      this.configService.get<string>('OvhStorage.baseUrl') ?? ''
-    ).replace(/\/+$/, '');
+    return recitation;
+  }
 
-    if (!baseUrl) {
-      this.logger.warn(
-        'OvhStorage.baseUrl is not configured; sending a relative audioUrl to the AI service',
-      );
-      return audioUrl;
+  private async signAudioUrls<T extends Recitation>(
+    recitations: T[],
+  ): Promise<T[]> {
+    return Promise.all(recitations.map((r) => this.signAudioUrl(r)));
+  }
+
+  /**
+   * Full object key for a recitation's audio.
+   *
+   * Rows written before recitations went private stored only the *file name* in
+   * `audio_key` while the object actually lives under `recitations/`, so delete
+   * calls silently hit a key that never existed. `audio_url` always held the
+   * full path, so prefer it and keep `audio_key` as the fallback.
+   */
+  private resolveAudioKey(recitation: Recitation): string {
+    const strip = (value: string) => (value ?? '').replace(/^\/+/, '');
+
+    const fromUrl = strip(recitation.audioUrl);
+    if (fromUrl && !/^https?:\/\//i.test(fromUrl)) {
+      return fromUrl;
     }
 
-    return `${baseUrl}${audioUrl.startsWith('/') ? '' : '/'}${audioUrl}`;
+    const key = strip(recitation.audioKey);
+    if (!key) return '';
+
+    return key.includes('/') ? key : `recitations/${key}`;
   }
 
   /**
@@ -1076,6 +1131,22 @@ export class RecitationsService {
     teacherId: number,
     recitationId: number,
   ): Promise<Recitation> {
+    return await this.signAudioUrl(
+      await this.loadRecitationForTeacher(teacherId, recitationId),
+    );
+  }
+
+  /**
+   * Same access check, but leaves `audioUrl` as the stored bucket path.
+   *
+   * Callers that go on to `save()` the row MUST use this one: signing mutates
+   * `audioUrl` in place, so a signed value would otherwise be written back to
+   * the database and the object path lost for good.
+   */
+  private async loadRecitationForTeacher(
+    teacherId: number,
+    recitationId: number,
+  ): Promise<Recitation> {
     // Get the teacher
     const teacher = await this.userRepository.findOne({
       where: { id: teacherId },
@@ -1124,7 +1195,7 @@ export class RecitationsService {
     evaluationDto: TeacherEvaluationDto,
   ): Promise<Recitation> {
     // Get and verify recitation access
-    const recitation = await this.getRecitationForTeacher(
+    const recitation = await this.loadRecitationForTeacher(
       teacherId,
       recitationId,
     );
@@ -1148,7 +1219,8 @@ export class RecitationsService {
       `Teacher ${teacherId} added evaluation for recitation ${recitationId} with score ${evaluationDto.score}`,
     );
 
-    return recitation;
+    // Sign only after the row is persisted.
+    return await this.signAudioUrl(recitation);
   }
 
   /**
@@ -1160,7 +1232,7 @@ export class RecitationsService {
     evaluationDto: TeacherEvaluationDto,
   ): Promise<Recitation> {
     // Get and verify recitation access
-    const recitation = await this.getRecitationForTeacher(
+    const recitation = await this.loadRecitationForTeacher(
       teacherId,
       recitationId,
     );
@@ -1190,6 +1262,7 @@ export class RecitationsService {
       `Teacher ${teacherId} updated evaluation for recitation ${recitationId} with new score ${evaluationDto.score}`,
     );
 
-    return recitation;
+    // Sign only after the row is persisted.
+    return await this.signAudioUrl(recitation);
   }
 }

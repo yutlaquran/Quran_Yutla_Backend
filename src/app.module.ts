@@ -10,7 +10,7 @@ import { AppService } from './app.service';
 import JWTConfig from './common/config/JWT-config';
 import appConfig from './common/config/app.config';
 import aiConfig from './common/config/ai.config';
-import OvhStorageConfig from './common/config/cloud-storage.config';
+import storageConfig from './common/config/cloud-storage.config';
 import paymobConfig from './common/config/paymob.config';
 import { dataSourceOptions } from './common/config/datasource-config';
 import { CustomI18nModule } from './common/services/custom-i18n.module';
@@ -36,7 +36,7 @@ const isProduction = process.env.APP_ENV === 'production';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [JWTConfig, appConfig, aiConfig, OvhStorageConfig, paymobConfig],
+      load: [JWTConfig, appConfig, aiConfig, storageConfig, paymobConfig],
       envFilePath: ['.env'],
       cache: true,
     }),

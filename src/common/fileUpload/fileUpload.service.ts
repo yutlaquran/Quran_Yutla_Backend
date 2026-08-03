@@ -1,20 +1,44 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   ObjectCannedACL,
   PutObjectCommand,
+  PutObjectCommandInput,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CustomI18nService } from '../services/custom-i18n.service';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { AllowedFileType } from '../enums/allowed-file-type.enum';
 const sharp = require('sharp');
+
+/**
+ * `public` objects are readable by anyone holding the URL and are served
+ * straight off the CDN. `private` objects are only reachable through a
+ * time-limited signed URL — use it for anything belonging to an identifiable
+ * user, e.g. a child's recorded recitation.
+ */
+export type StorageVisibility = 'public' | 'private';
+
+export interface StoredFile {
+  /** Bucket-relative path kept in the database, e.g. `/recitations/x.webm`. */
+  url: string;
+  /** Full object key, e.g. `recitations/x.webm`. Required to delete or sign. */
+  key: string;
+  filename: string;
+  size: number;
+}
+
 @Injectable()
 export class FileUploadService {
+  private readonly logger = new Logger(FileUploadService.name);
   private readonly s3Client: S3Client;
   private readonly bucketName: string;
+  private readonly supportsObjectAcl: boolean;
+  private readonly signedUrlTtl: number;
   private readonly quality: number;
   private readonly maxSizeLimit: number;
   private readonly maxCsvSizeLimit: number;
@@ -25,29 +49,30 @@ export class FileUploadService {
     private readonly i18n: CustomI18nService,
   ) {
     this.maxSizeLimit = this.configService.getOrThrow<number>(
-      'OvhStorage.fileSizeLimit',
+      'storage.fileSizeLimit',
     );
     this.maxCsvSizeLimit = this.configService.getOrThrow<number>(
-      'OvhStorage.fileCsvSizeLimit',
+      'storage.fileCsvSizeLimit',
     );
-    this.maxRows = this.configService.getOrThrow<number>('OvhStorage.maxRows');
+    this.maxRows = this.configService.getOrThrow<number>('storage.maxRows');
     this.s3Client = new S3Client({
-      region: this.configService.getOrThrow<string>('OvhStorage.region'),
-      endpoint: this.configService.getOrThrow<string>('OvhStorage.endpoint'),
+      region: this.configService.getOrThrow<string>('storage.region'),
+      endpoint: this.configService.getOrThrow<string>('storage.endpoint'),
       credentials: {
-        accessKeyId: this.configService.getOrThrow<string>(
-          'OvhStorage.accessKey',
-        ),
-        secretAccessKey: this.configService.getOrThrow<string>(
-          'OvhStorage.secretKey',
-        ),
+        accessKeyId: this.configService.getOrThrow<string>('storage.accessKey'),
+        secretAccessKey:
+          this.configService.getOrThrow<string>('storage.secretKey'),
       },
       forcePathStyle: true,
     });
 
     this.bucketName = this.configService.getOrThrow<string>(
-      'OvhStorage.bucketName',
+      'storage.bucketName',
     );
+    this.supportsObjectAcl =
+      this.configService.get<boolean>('storage.supportsObjectAcl') ?? true;
+    this.signedUrlTtl =
+      this.configService.get<number>('storage.signedUrlTtlSeconds') ?? 3600;
     this.quality =
       Number(this.configService.get<number>('IMAGE_QUALITY', 15)) || 60;
   }
@@ -57,27 +82,68 @@ export class FileUploadService {
     fileName: string,
     mimeType: string,
     uploadFolder: string,
+    visibility: StorageVisibility,
   ): Promise<string> {
-    const uploadParams = {
+    const key = `${uploadFolder}/${fileName}`;
+    const uploadParams: PutObjectCommandInput = {
       Bucket: this.bucketName,
-      Key: `${uploadFolder}/${fileName}`,
+      Key: key,
       Body: buffer,
       ContentType: mimeType,
-      ACL: 'public-read' as ObjectCannedACL,
-      Metadata: {
-        'Cache-Control': 'max-age=31536000',
-      },
+      // Real response header. It used to be set as user metadata, which the
+      // CDN/browser never reads, so nothing was actually being cached.
+      CacheControl:
+        visibility === 'private'
+          ? 'private, max-age=3600'
+          : 'public, max-age=31536000',
     };
+
+    // Only ever widen access deliberately. R2 has no per-object ACLs at all,
+    // so there the bucket itself must stay private and access comes from a
+    // signed URL.
+    if (visibility === 'public' && this.supportsObjectAcl) {
+      uploadParams.ACL = 'public-read' as ObjectCannedACL;
+    }
 
     await this.s3Client.send(new PutObjectCommand(uploadParams));
 
-    return `/${uploadFolder}/${fileName}`;
+    return key;
+  }
+
+  /**
+   * Time-limited download URL for a private object. Returns an empty string
+   * rather than throwing: a broken audio link must not take down the whole
+   * listing response.
+   */
+  async getPresignedUrl(
+    key: string,
+    expiresIn: number = this.signedUrlTtl,
+  ): Promise<string> {
+    if (!key) return '';
+
+    try {
+      return await getSignedUrl(
+        this.s3Client,
+        new GetObjectCommand({
+          Bucket: this.bucketName,
+          Key: key.startsWith('/') ? key.slice(1) : key,
+        }),
+        { expiresIn },
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to presign ${key}: ${error.message}`,
+        error.stack,
+      );
+      return '';
+    }
   }
 
   async processAndSaveFile(
     file: Express.Multer.File,
     uploadFolder: string,
-  ): Promise<{ url: string; filename: string; size: number }> {
+    visibility: StorageVisibility = 'public',
+  ): Promise<StoredFile> {
     if (!file) {
       throw new BadRequestException(this.i18n.t('file-upload.FILE_REQUIRED'));
     }
@@ -108,21 +174,28 @@ export class FileUploadService {
       processedBuffer = file.buffer;
     }
     const fileName = `${uuidv4()}-${file.originalname}`;
-    const fileUrl = await this.uploadToS3(
+    const key = await this.uploadToS3(
       processedBuffer,
       fileName,
       file.mimetype,
       uploadFolder,
+      visibility,
     );
-    return { url: fileUrl, filename: fileName, size: processedBuffer.length };
+    return {
+      url: `/${key}`,
+      key,
+      filename: fileName,
+      size: processedBuffer.length,
+    };
   }
 
   async processAndSaveFiles(
     files: Express.Multer.File[],
     uploadDir: string,
-  ): Promise<{ url: string; filename: string }[]> {
+    visibility: StorageVisibility = 'public',
+  ): Promise<StoredFile[]> {
     return await Promise.all(
-      files.map((file) => this.processAndSaveFile(file, uploadDir)),
+      files.map((file) => this.processAndSaveFile(file, uploadDir, visibility)),
     );
   }
 
