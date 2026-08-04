@@ -37,6 +37,7 @@ export class FileUploadService {
   private readonly logger = new Logger(FileUploadService.name);
   private readonly s3Client: S3Client;
   private readonly bucketName: string;
+  private readonly publicBucketName: string;
   private readonly supportsObjectAcl: boolean;
   private readonly signedUrlTtl: number;
   private readonly quality: number;
@@ -69,6 +70,9 @@ export class FileUploadService {
     this.bucketName = this.configService.getOrThrow<string>(
       'storage.bucketName',
     );
+    this.publicBucketName = this.configService.getOrThrow<string>(
+      'storage.publicBucketName',
+    );
     this.supportsObjectAcl =
       this.configService.get<boolean>('storage.supportsObjectAcl') ?? true;
     this.signedUrlTtl =
@@ -86,7 +90,7 @@ export class FileUploadService {
   ): Promise<string> {
     const key = `${uploadFolder}/${fileName}`;
     const uploadParams: PutObjectCommandInput = {
-      Bucket: this.bucketName,
+      Bucket: visibility === 'public' ? this.publicBucketName : this.bucketName,
       Key: key,
       Body: buffer,
       ContentType: mimeType,

@@ -39,6 +39,16 @@ export default registerAs('storage', (): Record<string, unknown> => {
     secretKey:
       process.env.STORAGE_SECRET_KEY || process.env.OVH_SECRET_ACCESS_KEY,
     bucketName: process.env.STORAGE_BUCKET || process.env.OVH_BUCKET_NAME,
+    // Where 'public' visibility uploads go. On R2 this MUST be a different
+    // bucket than the private one: a custom domain exposes every object in
+    // the bucket it's attached to, with no per-object distinction, so a
+    // shared bucket would make recitations publicly fetchable by key. Falls
+    // back to the private bucket for OVH, which keeps working with the
+    // per-object ACL it already sets on 'public' uploads.
+    publicBucketName:
+      process.env.STORAGE_PUBLIC_BUCKET ||
+      process.env.STORAGE_BUCKET ||
+      process.env.OVH_BUCKET_NAME,
     baseUrl: resolveStoragePublicUrl(),
     // R2 has no per-object ACLs: public access there is a bucket-level setting
     // bound to a custom domain, so the header is pointless (and unsupported).
