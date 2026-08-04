@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,6 +18,8 @@ import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class EmailVerificationService {
+  private readonly logger = new Logger(EmailVerificationService.name);
+
   constructor(
     @InjectRepository(EmailVerification)
     private readonly emailVerificationRepository: Repository<EmailVerification>,
@@ -95,7 +98,24 @@ export class EmailVerificationService {
 
     await this.emailVerificationRepository.save(emailVerification);
 
-    this.emailService.sendVerificationEmail(user.fullName, user.email, otpCode);
+    // Awaited on purpose. Fire-and-forget here meant a rejected send became an
+    // unhandled promise: signup answered "success", nothing reached the inbox,
+    // and no error was logged anywhere — the failure was invisible.
+    try {
+      await this.emailService.sendVerificationEmail(
+        user.fullName,
+        user.email,
+        otpCode,
+      );
+      this.logger.log(`Verification email sent to ${user.email}`);
+    } catch (error) {
+      // The OTP row is already stored, so the code stays usable via resend.
+      // Surface the real cause instead of failing the whole signup.
+      this.logger.error(
+        `Failed to send verification email to ${user.email}: ${error.message}`,
+        error.stack,
+      );
+    }
 
     return {
       expiresIn: '15 minutes',

@@ -35,7 +35,13 @@ export class ServerEmailService {
         message: `Verification email sent successfully to ${trimmedEmail}`,
       };
     } catch (error) {
-      throw new Error(`Failed to send verification email: ${error.message}`);
+      // Keep the original error as the cause: SMTP failures carry the code that
+      // actually identifies the problem (EAUTH = bad credentials, ETIMEDOUT =
+      // blocked port), and a plain re-wrap throws it away.
+      throw new Error(
+        `Failed to send verification email to ${trimmedEmail}: ${error.code ?? ''} ${error.message}`,
+        { cause: error },
+      );
     }
   }
 
