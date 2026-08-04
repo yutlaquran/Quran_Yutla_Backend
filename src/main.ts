@@ -43,7 +43,10 @@ async function bootstrap() {
 
   app.useGlobalFilters(new GlobalExceptionFilter(configService));
 
-  await app.listen(process.env.HTTP_PORT ?? 3777);
+  // Bind to all interfaces, not the default loopback. Inside a container
+  // nothing outside the process can reach 127.0.0.1/[::1], so a health check
+  // from the platform times out even though the app started fine.
+  await app.listen(process.env.HTTP_PORT ?? 3777, process.env.HTTP_HOST ?? '0.0.0.0');
 
   void Logger.log(`Application is running on: ${await app.getUrl()}`);
   void Logger.log(`Environment: ${process.env.APP_ENV}`);
