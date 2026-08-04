@@ -43,10 +43,16 @@ async function bootstrap() {
 
   app.useGlobalFilters(new GlobalExceptionFilter(configService));
 
-  // Bind to all interfaces, not the default loopback. Inside a container
-  // nothing outside the process can reach 127.0.0.1/[::1], so a health check
-  // from the platform times out even though the app started fine.
-  await app.listen(process.env.HTTP_PORT ?? 3777, process.env.HTTP_HOST ?? '0.0.0.0');
+  // PORT first: hosting platforms (Railway, Render, Heroku, Cloud Run) assign
+  // the port they route and health-check on, and it is not always the one we
+  // configured. HTTP_PORT stays as the local/self-hosted setting.
+  //
+  // Bind to all interfaces too — inside a container nothing outside the process
+  // can reach 127.0.0.1/[::1], so a platform health check times out even though
+  // the app started fine.
+  const port = process.env.PORT ?? process.env.HTTP_PORT ?? 3777;
+  const host = process.env.HTTP_HOST ?? '0.0.0.0';
+  await app.listen(port, host);
 
   void Logger.log(`Application is running on: ${await app.getUrl()}`);
   void Logger.log(`Environment: ${process.env.APP_ENV}`);
