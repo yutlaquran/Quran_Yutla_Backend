@@ -13,6 +13,7 @@ import { SendVerificationDto } from './dto/send-verification.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import * as crypto from 'node:crypto';
 import { PasswordResetTokenService } from '../auth/password-reset-token.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class EmailVerificationService {
@@ -24,6 +25,7 @@ export class EmailVerificationService {
     private readonly emailService: ServerEmailService,
     private readonly i18n: CustomI18nService,
     private passwordResetTokenService: PasswordResetTokenService,
+    private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
   async sendVerificationCode(
@@ -160,6 +162,11 @@ export class EmailVerificationService {
       // Only update email verification status for regular signup
       user.isEmailVerified = true;
       await this.userRepository.save(user);
+
+      // Beta stop-gap while Paymob is not live: a verified user would otherwise
+      // have no way to record anything. No-op unless FREE_SUBSCRIPTION_ON_VERIFY
+      // is on, and it swallows its own errors so verification never fails here.
+      await this.subscriptionsService.grantFreeSubscriptionOnVerify(user.id);
     }
 
     if (isPasswordReset) {

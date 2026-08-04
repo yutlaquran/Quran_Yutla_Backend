@@ -628,6 +628,75 @@ export class SubscriptionsService {
   }
 
   /**
+   * Grant a complimentary subscription once a user verifies their email.
+   *
+   * Stop-gap for the beta while Paymob is not live yet: without it a verified
+   * user cannot record anything at all. Gated on FREE_SUBSCRIPTION_ON_VERIFY so
+   * turning it off is one variable change the day payments work — otherwise
+   * this quietly keeps handing out free plans forever.
+   *
+   * Never throws: email verification must succeed even if granting fails.
+   */
+  async grantFreeSubscriptionOnVerify(
+    userId: number,
+  ): Promise<Subscription | null> {
+    const enabled =
+      (this.configService.get<string>('FREE_SUBSCRIPTION_ON_VERIFY') ||
+        process.env.FREE_SUBSCRIPTION_ON_VERIFY) === 'true';
+
+    if (!enabled) return null;
+
+    try {
+      const existing = await this.findUserSubscription(userId);
+      if (existing) return existing;
+
+      await this.plansService.ensureDefaultPlansSeeded();
+      const [selectedPlan] = await this.plansService.findAll();
+
+      if (!selectedPlan) {
+        this.logger.warn(
+          `FREE_SUBSCRIPTION_ON_VERIFY is on but no active plan exists; user ${userId} got nothing`,
+        );
+        return null;
+      }
+
+      const now = new Date();
+      const endDate = new Date(now);
+      endDate.setDate(endDate.getDate() + selectedPlan.durationDays);
+
+      const subscription = this.subscriptionRepository.create({
+        userId,
+        planId: selectedPlan.id,
+        totalSessions: selectedPlan.sessionCount,
+        remainingSessions: selectedPlan.sessionCount,
+        sessionDuration: selectedPlan.sessionDuration,
+        autoRenew: false,
+        // Distinct from 'dev-test' so these are findable and revocable once
+        // real payments start.
+        paymentMethod: 'free-beta',
+        status: SubscriptionStatus.ACTIVE,
+        startDate: now,
+        endDate,
+        lastPaymentDate: now,
+        nextBillingDate: endDate,
+        transactionId: `FREEBETA-${userId}-${Date.now()}`,
+      });
+
+      const saved = await this.subscriptionRepository.save(subscription);
+      this.logger.log(
+        `Granted free beta subscription ${saved.id} to user ${userId} on email verification`,
+      );
+      return saved;
+    } catch (error) {
+      this.logger.error(
+        `Failed to grant free subscription to user ${userId}: ${error.message}`,
+        error.stack,
+      );
+      return null;
+    }
+  }
+
+  /**
    * Suspend subscription (Admin only)
    */
   async suspendSubscription(subscriptionId: number, reason?: string): Promise<Subscription> {

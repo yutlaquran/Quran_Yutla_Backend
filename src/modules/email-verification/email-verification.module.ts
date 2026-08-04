@@ -7,6 +7,7 @@ import { EmailVerification } from './entities/email-verification.entity';
 import { User } from '../user/entities/user.entity';
 import { PasswordResetTokenService } from '../auth/password-reset-token.service';
 import { ServerEmailModule } from 'src/common/email/email.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ServerEmailModule } from 'src/common/email/email.module';
     JwtModule.register({}),
     ConfigModule,
     ServerEmailModule,
+    SubscriptionsModule,
   ],
   providers: [EmailVerificationService, PasswordResetTokenService],
   exports: [EmailVerificationService],
