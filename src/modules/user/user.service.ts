@@ -240,7 +240,14 @@ export class UserService {
 
   // ==================== Teacher-Student Linking ====================
 
-  async linkTeacher(teacherId: number, studentId: number): Promise<User> {
+  /**
+   * Link a student to a teacher by the student's 6-digit code.
+   *
+   * The code rather than the row id, matching how parents link children: a
+   * teacher can read a code off the learner's screen, while an internal id is
+   * neither visible to them nor safe to guess at.
+   */
+  async linkTeacher(teacherId: number, studentCode: string): Promise<User> {
     // Find teacher
     const teacher = await this.userRepository.findOne({
       where: { id: teacherId },
@@ -256,13 +263,13 @@ export class UserService {
       throw new NotFoundException(this.i18n.t('user.USER_IS_NOT_TEACHER'));
     }
 
-    // Find student
+    // Find student by code
     const student = await this.userRepository.findOne({
-      where: { id: studentId },
+      where: { studentCode },
     });
 
     if (!student) {
-      throw new NotFoundException(this.i18n.t('user.STUDENT_NOT_FOUND'));
+      throw new NotFoundException(this.i18n.t('user.STUDENT_CODE_NOT_FOUND'));
     }
 
     // Check if student has STUDENT role
@@ -271,7 +278,7 @@ export class UserService {
     }
 
     // Check if already linked
-    const isAlreadyLinked = teacher.students?.some((s) => s.id === studentId);
+    const isAlreadyLinked = teacher.students?.some((s) => s.id === student.id);
     if (isAlreadyLinked) {
       throw new NotFoundException(
         this.i18n.t('user.STUDENT_ALREADY_LINKED_TO_TEACHER'),

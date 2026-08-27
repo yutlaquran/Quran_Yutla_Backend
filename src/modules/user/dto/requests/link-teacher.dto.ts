@@ -1,13 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsPositive } from 'class-validator';
+import { IsNotEmpty, IsString, Length } from 'class-validator';
 
 export class LinkTeacherDto {
   @ApiProperty({
-    description: 'Student ID to link with teacher',
-    example: 123,
+    description: 'Student unique code (6 digits)',
+    example: '123456',
   })
-  @IsNotEmpty({ message: 'Student ID is required' })
-  @IsNumber({}, { message: 'Student ID must be a number' })
-  @IsPositive({ message: 'Student ID must be a positive number' })
-  studentId: number;
+  @IsNotEmpty({ message: 'Student code is required' })
+  @IsString()
+  @Length(6, 6, { message: 'Student code must be 6 digits' })
+  studentCode: string;
 }

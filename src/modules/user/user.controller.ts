@@ -131,15 +131,22 @@ export class UserController {
 
   @Post('link-teacher')
   @Auth(RolesEnum.TEACHER)
-  @ApiOperation({ summary: 'Link a student to teacher' })
+  @ApiOperation({
+    summary: 'Link a student to teacher',
+    description:
+      "Identified by the student's 6-digit code, the same way parents link children.",
+  })
   @ApiResponse({ status: 200, description: 'Student linked successfully' })
-  @ApiResponse({ status: 404, description: 'Student not found' })
+  @ApiResponse({ status: 404, description: 'Student code not found' })
   @SuccessResponse('Student linked successfully', 200)
   async linkTeacher(
     @CurrentUser() teacher: User,
     @Body() linkTeacherDto: LinkTeacherDto,
   ) {
-    return await this.userService.linkTeacher(teacher.id, linkTeacherDto.studentId);
+    return await this.userService.linkTeacher(
+      teacher.id,
+      linkTeacherDto.studentCode,
+    );
   }
 
   @Get('students')
