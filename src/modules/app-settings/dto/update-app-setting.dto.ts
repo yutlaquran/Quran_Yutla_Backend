@@ -3,7 +3,9 @@ import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateAppSettingDto {
   @ApiPropertyOptional({
-    description: 'Backward-compatible alias for maintenanceMode',
+    description:
+      'Deprecated alias for maintenanceMode. Kept for older clients; sending both with different values returns 400. Use maintenanceMode instead.',
+    deprecated: true,
     example: false,
   })
   @IsOptional()

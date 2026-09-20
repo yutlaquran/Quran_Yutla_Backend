@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { UpdateAppSettingDto } from './dto/update-app-setting.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AppSetting } from './entities/app-setting.entity';
@@ -14,36 +14,16 @@ export class AppSettingsService {
   ) {}
 
   async getApplicationSetting() {
-    let setting = await this.appSettingRepository.findOne({
-      where: { name: 'application' },
-    });
-
-    if (!setting) {
-      setting = await this.appSettingRepository.save({
-        name: 'application',
-        enabled: false,
-        maintenanceMode: false,
-        maintenanceMessage: this.defaultMaintenanceMessage,
-        allowRegistration: true,
-        minAppVersion: '1.0.0',
-      });
-    }
-
-    if (setting.maintenanceMode !== setting.enabled) {
-      setting.maintenanceMode = setting.enabled;
-      setting = await this.appSettingRepository.save(setting);
-    }
-
-    return setting;
+    return this.withEnabledAlias(await this.findOrCreateApplicationSetting());
   }
 
   async setApplicationSetting(updateAppSettingDto: UpdateAppSettingDto) {
-    const setting = await this.getApplicationSetting();
+    const setting = await this.findOrCreateApplicationSetting();
 
-    const maintenanceMode =
-      updateAppSettingDto.maintenanceMode ??
-      updateAppSettingDto.enabled ??
-      setting.maintenanceMode;
+    const maintenanceMode = this.resolveMaintenanceMode(
+      updateAppSettingDto,
+      setting,
+    );
 
     setting.maintenanceMode = maintenanceMode;
     setting.enabled = maintenanceMode;
@@ -55,8 +35,57 @@ export class AppSettingsService {
     setting.minAppVersion =
       updateAppSettingDto.minAppVersion ?? setting.minAppVersion;
 
-    await this.appSettingRepository.save(setting);
+    return this.withEnabledAlias(
+      await this.appSettingRepository.save(setting),
+    );
+  }
 
-    return this.getApplicationSetting();
+  private async findOrCreateApplicationSetting(): Promise<AppSetting> {
+    const setting = await this.appSettingRepository.findOne({
+      where: { name: 'application' },
+    });
+
+    if (setting) {
+      return setting;
+    }
+
+    return this.appSettingRepository.save({
+      name: 'application',
+      enabled: false,
+      maintenanceMode: false,
+      maintenanceMessage: this.defaultMaintenanceMessage,
+      allowRegistration: true,
+      minAppVersion: '1.0.0',
+    });
+  }
+
+  /**
+   * `enabled` is the legacy name of `maintenanceMode`. Callers may send either,
+   * but sending both with different values is a contradiction we refuse rather
+   * than silently resolve.
+   */
+  private resolveMaintenanceMode(
+    updateAppSettingDto: UpdateAppSettingDto,
+    setting: AppSetting,
+  ): boolean {
+    const { enabled, maintenanceMode } = updateAppSettingDto;
+
+    if (
+      enabled !== undefined &&
+      maintenanceMode !== undefined &&
+      enabled !== maintenanceMode
+    ) {
+      throw new BadRequestException(
+        'enabled is an alias of maintenanceMode, so they cannot be set to different values. Send only maintenanceMode.',
+      );
+    }
+
+    return maintenanceMode ?? enabled ?? setting.maintenanceMode;
+  }
+
+  /** `maintenance_mode` is the source of truth; `enabled` only mirrors it. */
+  private withEnabledAlias(setting: AppSetting): AppSetting {
+    setting.enabled = setting.maintenanceMode;
+    return setting;
   }
 }
