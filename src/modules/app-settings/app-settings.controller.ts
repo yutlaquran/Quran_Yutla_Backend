@@ -45,6 +45,15 @@ export class AppSettingsController {
 
   @Patch('application')
   @Auth(RolesEnum.ADMIN)
+  @ApiOperation({
+    summary: 'Update application settings (Admin)',
+    description:
+      'enabled is a deprecated alias of maintenanceMode and always mirrors it in the response. Sending both with different values is rejected.',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'enabled and maintenanceMode were sent with different values',
+  })
   @SuccessResponse('Settings updated successfully', HttpStatus.OK)
   async setApplicationSetting(
     @Body() updateAppSettingDto: UpdateAppSettingDto,
